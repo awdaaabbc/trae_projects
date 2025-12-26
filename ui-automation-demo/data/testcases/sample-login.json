@@ -1,0 +1,69 @@
+{
+  "id": "sample-login",
+  "name": "SauceDemo 登录下单流程",
+  "description": "访问 saucedemo.com，登录后添加商品到购物车并结账（演示用）",
+  "steps": [
+    {
+      "id": "u1766739383812-0",
+      "type": "action",
+      "action": "在上方的地址栏中，输入https://www.saucedemo.com/，并按下回车"
+    },
+    {
+      "id": "u1766739383812-1",
+      "type": "action",
+      "action": "在 Username栏（带有Username标识）中 输入 standard_user"
+    },
+    {
+      "id": "u1766739383812-2",
+      "type": "action",
+      "action": "在 Password（带有Username标识）中 输入 secret_sauce"
+    },
+    {
+      "id": "u1766739383812-3",
+      "type": "action",
+      "action": "点击 Login（通常是一个绿色按钮）"
+    },
+    {
+      "id": "u1766739383812-4",
+      "type": "action",
+      "action": "点击所有商品中的第一个（通常在左上角）的 Add to cart按钮"
+    },
+    {
+      "id": "u1766739383812-5",
+      "type": "action",
+      "action": "点击 右上角的购物车图片（通常是一个购物车图标）"
+    },
+    {
+      "id": "u1766739383812-6",
+      "type": "action",
+      "action": "点击 Checkout"
+    },
+    {
+      "id": "u1766739383812-7",
+      "type": "action",
+      "action": "在 First Name栏中输入 Jane"
+    },
+    {
+      "id": "u1766739383812-8",
+      "type": "action",
+      "action": "在 Last Name栏中输入 Doe"
+    },
+    {
+      "id": "u1766739383812-9",
+      "type": "action",
+      "action": "在 Zip/Postal Code 输入 12345"
+    },
+    {
+      "id": "u1766739383812-10",
+      "type": "action",
+      "action": "点击 Continue"
+    },
+    {
+      "id": "u1766739383812-11",
+      "type": "action",
+      "action": "点击 Finish"
+    }
+  ],
+  "status": "running",
+  "lastRunAt": 1766740026587
+}

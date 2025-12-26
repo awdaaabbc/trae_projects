@@ -1,0 +1,50 @@
+{
+  "id": "saucedemo-optimized-flow",
+  "name": "SauceDemo 购物流程 (优化版)",
+  "description": "使用优化后的自然语言指令，包含视觉特征描述，完成登录、加购、结算全流程。",
+  "steps": [
+    {
+      "id": "step-1",
+      "action": "打开 https://www.saucedemo.com/",
+      "type": "action"
+    },
+    {
+      "id": "step-2",
+      "action": "在页面中间的 Username 输入框中输入 \"standard_user\"，在 Password 输入框中输入 \"secret_sauce\"，然后点击 Login 按钮",
+      "type": "action"
+    },
+    {
+      "id": "step-3",
+      "action": "找到 \"Sauce Labs Backpack\" 商品，点击其右侧的 \"Add to cart\" 按钮",
+      "type": "action"
+    },
+    {
+      "id": "step-4",
+      "action": "点击页面右上角的购物车图标",
+      "type": "action"
+    },
+    {
+      "id": "step-5",
+      "action": "点击页面右侧的 \"Checkout\" 按钮",
+      "type": "action"
+    },
+    {
+      "id": "step-6",
+      "action": "在 \"First Name\" 输入框中输入 \"John\"，在 \"Last Name\" 输入框中输入 \"Doe\"，在 \"Zip/Postal Code\" 输入框中输入 \"10001\"，然后点击 \"Continue\" 按钮",
+      "type": "action"
+    },
+    {
+      "id": "step-7",
+      "action": "点击页面底部的 \"Finish\" 按钮",
+      "type": "action"
+    },
+    {
+      "id": "step-8",
+      "action": "页面中心应显示大写的 \"THANK YOU FOR YOUR ORDER\"",
+      "type": "assert"
+    }
+  ],
+  "status": "error",
+  "createdAt": 1735200000000,
+  "lastRunAt": 1766740810207
+}

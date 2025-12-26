@@ -1,0 +1,9 @@
+{
+  "id": "exe-1766739094293-2bb4b29f",
+  "caseId": "ai-demo-github",
+  "status": "failed",
+  "progress": 100,
+  "createdAt": 1766739094293,
+  "updatedAt": 1766739155470,
+  "errorMessage": "Assertion failed: 查看当前页面可见区域，未发现 'Readme' 文本，故断言结果为 false (Assertion = 页面包含 'Readme' 文本)\nError: Assertion failed: 查看当前页面可见区域，未发现 'Readme' 文本，故断言结果为 false (Assertion = 页面包含 'Readme' 文本)\n    at WebPage.call (file:///Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/@midscene/core/dist/es/device/index.mjs:164:38)\n    at Object.executor (file:///Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/@midscene/core/dist/es/agent/task-builder.mjs:160:44)\n    at async TaskRunner.flush (file:///Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/@midscene/core/dist/es/task-runner.mjs:149:72)\n    at async TaskExecutor.action (file:///Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/@midscene/core/dist/es/agent/tasks.mjs:172:17)\n    at async PlaywrightAgent.aiAct (file:///Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/@midscene/core/dist/es/agent/agent.mjs:349:28)\n    at async file:///Users/ledu/Documents/trae_projects/ui-automation-demo/dist/server/runner.js:89:25\n    at async runTestCase (file:///Users/ledu/Documents/trae_projects/ui-automation-demo/dist/server/runner.js:92:17)\n    at async file:///Users/ledu/Documents/trae_projects/ui-automation-demo/dist/server/index.js:116:24"
+}

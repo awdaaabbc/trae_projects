@@ -1,10 +1,10 @@
 {
   "id": "8a583ba9-3a99-4cc7-b6a1-89e4cc78750d",
-  "name": "联调创建用例",
+  "name": "联调创建用例11111",
   "description": "用于接口契约回归测试",
   "steps": [
     {
-      "id": "s1",
+      "id": "u1766733266099-0",
       "type": "action",
       "action": "打开 https://example.com"
     }

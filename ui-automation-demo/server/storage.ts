@@ -91,8 +91,18 @@ function persistExecution(exe: Execution) {
 loadCases()
 loadExecutions()
 
+// Reload cases from disk
+function reloadCases() {
+  // Clear current memory cache
+  for (const id in cases) delete cases[id]
+  for (const id in caseFileById) delete caseFileById[id]
+  loadCases()
+}
+
 export const Storage = {
+  reloadCases, // Export reload function
   listCases(): TestCase[] {
+    reloadCases() // Ensure we always return fresh data from disk
     return Object.values(cases)
   },
   getCase(id: string): TestCase | undefined {
@@ -126,4 +136,33 @@ export const Storage = {
     executions[id] = updated
     persistExecution(updated)
   },
+  deleteCase(id: string): boolean {
+    const tc = cases[id]
+    if (!tc) return false
+
+    // 1. Delete Test Case File
+    const fileName = caseFileById[id]
+    if (fileName) {
+      const filePath = path.join(DATA_DIR, fileName)
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath)
+      }
+      delete caseFileById[id]
+    }
+    delete cases[id]
+
+    // 2. Delete Associated Executions
+    Object.keys(executions).forEach(exeId => {
+      const exe = executions[exeId]
+      if (exe.caseId === id) {
+        const exePath = path.join(EXEC_DIR, `${exeId}.json`)
+        if (fs.existsSync(exePath)) {
+          fs.unlinkSync(exePath)
+        }
+        delete executions[exeId]
+      }
+    })
+
+    return true
+  }
 }

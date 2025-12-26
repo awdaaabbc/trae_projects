@@ -1,0 +1,9 @@
+{
+  "id": "exe-1766730070485-e6753004",
+  "caseId": "3923de33-b329-4e80-b573-873ae4d614ba",
+  "status": "failed",
+  "progress": 100,
+  "createdAt": 1766730070485,
+  "updatedAt": 1766730122049,
+  "errorMessage": "Assertion failed: 搜索结果页包含 \"MidScene\"\nReason: The screenshot shows the Baidu search page with the query 'MidScene AI' entered, but no search results are displayed. The page prompts to press 'Enter' to initiate the search, indicating the search has not been executed. Therefore, there is no search results page containing 'MidScene'. The statement is false."
+}

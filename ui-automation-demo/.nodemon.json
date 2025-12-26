@@ -1,6 +1,6 @@
 {
   "watch": ["dist/server/"],
   "ext": "js,json",
-  "exec": "node dist/server/index.js",
+  "exec": "node -r dotenv/config dist/server/index.js",
   "verbose": true
 }

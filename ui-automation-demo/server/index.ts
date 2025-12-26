@@ -7,7 +7,7 @@ import crypto from 'node:crypto'
 import dotenv from 'dotenv'
 import { Storage } from './storage.js'
 import type { Execution, TestCase } from './types.js'
-import { runTestCase } from './runner.js'
+import { runTestCase, cancelExecution } from './runner.js'
 
 dotenv.config()
 
@@ -52,27 +52,33 @@ app.get('/api/testcases', (_req: Request, res: Response) => {
 })
 
 app.post('/api/testcases', (req: Request, res: Response) => {
-  const body = req.body as Partial<TestCase> & { id?: string }
-  const id = body.id || crypto.randomUUID()
-  const existing = Storage.getCase(id)
-  
-  const tc: TestCase = {
-    id,
-    name: body.name || '',
-    description: body.description || '',
-    steps: Array.isArray(body.steps) ? body.steps : [],
-    status: existing ? existing.status : 'idle',
-    lastRunAt: existing?.lastRunAt,
-    lastReportPath: existing?.lastReportPath,
+  try {
+    const body = req.body as Partial<TestCase> & { id?: string }
+    const id = body.id || crypto.randomUUID()
+    const existing = Storage.getCase(id)
+    
+    const tc: TestCase = {
+      id,
+      name: body.name || '',
+      description: body.description || '',
+      steps: Array.isArray(body.steps) ? body.steps : [],
+      status: existing ? existing.status : 'idle',
+      lastRunAt: existing?.lastRunAt,
+      lastReportPath: existing?.lastReportPath,
+    }
+    Storage.saveCase(tc)
+    res.json({ data: tc })
+  } catch (err) {
+    console.error('Failed to create test case:', err)
+    const msg = err instanceof Error ? err.message : String(err)
+    res.status(500).json({ error: `创建测试用例失败: ${msg}` })
   }
-  Storage.saveCase(tc)
-  res.json({ data: tc })
 })
 
 app.put('/api/testcases/:id', (req: Request, res: Response) => {
   const id = req.params.id
   const tc = Storage.getCase(id)
-  if (!tc) return res.status(404).json({ error: 'Test case not found' })
+  if (!tc) return res.status(404).json({ error: '未找到测试用例' })
   const body = req.body as Partial<TestCase>
 
   const updated: TestCase = {
@@ -87,13 +93,19 @@ app.put('/api/testcases/:id', (req: Request, res: Response) => {
 
 // Executions APIs
 app.get('/api/executions', (_req: Request, res: Response) => {
-  res.json({ data: Storage.listExecutions() })
+  try {
+    res.json({ data: Storage.listExecutions() })
+  } catch (err) {
+    console.error('Failed to list executions:', err)
+    const msg = err instanceof Error ? err.message : String(err)
+    res.status(500).json({ error: `获取执行列表失败: ${msg}` })
+  }
 })
 
 app.post('/api/execute/:id', async (req: Request, res: Response) => {
   const id = req.params.id
   const tc = Storage.getCase(id)
-  if (!tc) return res.status(404).json({ error: 'Test case not found' })
+  if (!tc) return res.status(404).json({ error: '未找到测试用例' })
   Storage.updateCase(id, { status: 'running' })
   const exeId = `exe-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`
   const createdAt = Date.now()
@@ -146,19 +158,43 @@ app.post('/api/execute/:id', async (req: Request, res: Response) => {
   res.json({ data: Storage.getExecution(exeId) })
 })
 
-app.use((err: unknown, req: Request, res: Response, next: NextFunction) => {
+app.post('/api/stop-execution/:id', (req: Request, res: Response) => {
+  const id = req.params.id
+  if (!id) return res.status(400).json({ error: 'Missing execution ID' })
+  
+  const success = cancelExecution(id)
+  if (success) {
+    res.json({ ok: true })
+  } else {
+    res.status(404).json({ error: 'Execution not found or already finished' })
+  }
+})
+
+app.delete('/api/testcases/:id', (req: Request, res: Response) => {
+  const id = req.params.id
+  if (!id) return res.status(400).json({ error: 'Missing test case ID' })
+
+  const success = Storage.deleteCase(id)
+  if (success) {
+    res.status(204).send()
+  } else {
+    res.status(404).json({ error: 'Test case not found' })
+  }
+})
+
+app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
   const requestId = (req as Request & { requestId?: string }).requestId || '-'
   console.error(`[error] ${requestId} ${req.method} ${req.originalUrl}`, err)
-  if (res.headersSent) return next(err as Error)
+  if (res.headersSent) return
 
   const anyErr = err as { type?: unknown }
   const isJsonSyntaxError = err instanceof SyntaxError && anyErr.type === 'entity.parse.failed'
   if (isJsonSyntaxError) {
-    res.status(400).json({ error: 'Invalid JSON body' })
+    res.status(400).json({ error: '无效的 JSON 请求体' })
     return
   }
 
-  res.status(500).json({ error: 'Internal Server Error' })
+  res.status(500).json({ error: '服务器内部错误' })
 })
 
 // WebSocket for status updates

@@ -1,4 +1,4 @@
-import { chromium } from 'playwright'
+import { chromium, type Browser } from 'playwright'
 import { PlaywrightAgent } from '@midscene/web/playwright'
 import path from 'node:path'
 import fs from 'node:fs'
@@ -10,12 +10,28 @@ export interface RunResult {
   errorMessage?: string;
 }
 
+const runningExecutions = new Map<string, { browser: Browser, controller: AbortController }>()
+
+export function cancelExecution(executionId: string) {
+  const entry = runningExecutions.get(executionId)
+  if (entry) {
+    entry.controller.abort()
+    entry.browser.close().catch(() => {})
+    runningExecutions.delete(executionId)
+    return true
+  }
+  return false
+}
+
 export async function runTestCase(
   testCase: TestCase,
   executionId: string,
   updateCallback: (patch: Partial<Execution>) => void
 ): Promise<RunResult> {
-  let browser
+  let browser: Browser | undefined
+  const controller = new AbortController()
+  const { signal } = controller
+
   try {
     const hasModel =
       !!process.env.MIDSCENE_MODEL_BASE_URL &&
@@ -32,6 +48,7 @@ export async function runTestCase(
     const reportId = `${executionId}-${testCase.id}`
 
     if (!hasModel) {
+      // ... (keep placeholder logic as is, but add signal check)
       console.warn('MidScene model not configured. Generating placeholder report.')
       updateCallback({ status: 'running', progress: 50 })
       
@@ -40,8 +57,14 @@ export async function runTestCase(
       const html = `<!doctype html><html><head><meta charset="utf-8"><title>执行报告占位</title></head><body><h2>未配置MidScene模型，展示占位报告</h2><p>请设置环境变量 MIDSCENE_MODEL_BASE_URL、MIDSCENE_MODEL_API_KEY、MIDSCENE_MODEL_NAME。</p></body></html>`
       fs.writeFileSync(fallback, html, 'utf8')
       
-      // Simulate delay
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      // Simulate delay with cancellation support
+      await new Promise((resolve, reject) => {
+        const timer = setTimeout(resolve, 1000)
+        signal.addEventListener('abort', () => {
+          clearTimeout(timer)
+          reject(new Error('Execution cancelled'))
+        })
+      })
       
       updateCallback({ progress: 100 })
       return {
@@ -51,8 +74,17 @@ export async function runTestCase(
     }
 
     browser = await chromium.launch({ headless: false })
+    runningExecutions.set(executionId, { browser, controller })
+
     const context = await browser.newContext()
     const page = await context.newPage()
+    
+    // Check if browser is closed unexpectedly
+    browser.on('disconnected', () => {
+      if (!signal.aborted) {
+        controller.abort(new Error('Browser disconnected unexpectedly'))
+      }
+    })
     
     // Initialize Agent with report configuration
     const agentOpts = {
@@ -65,19 +97,41 @@ export async function runTestCase(
     const totalSteps = testCase.steps.length
     
     for (let i = 0; i < totalSteps; i++) {
+        if (signal.aborted) throw new Error('Execution cancelled')
+
         const step = testCase.steps[i]
         const progress = Math.round(((i) / totalSteps) * 100)
         updateCallback({ progress })
 
         try {
             console.log(`Executing step ${i + 1}/${totalSteps}: ${step.type || 'action'} - ${step.action}`)
-            if (step.type === 'query') {
-                await agent.aiQuery(step.action)
-            } else if (step.type === 'assert') {
-                await agent.aiAssert(step.action)
-            } else {
-                await agent.aiAction(step.action)
-            }
+            
+            // Timeout wrapper for each step (e.g., 2 minutes)
+            const stepTimeout = 120000
+            const stepPromise = (async () => {
+               if (step.type === 'query') {
+                   const res = await agent.aiQuery(step.action)
+                   console.log('[MidScene Query Result]', JSON.stringify(res, null, 2))
+               } else if (step.type === 'assert') {
+                   const res = await agent.aiAssert(step.action)
+                   console.log('[MidScene Assert Result]', JSON.stringify(res, null, 2))
+               } else {
+                   const res = await agent.aiAction(step.action)
+                   console.log('[MidScene Action Result]', JSON.stringify(res, null, 2))
+               }
+            })()
+
+            await Promise.race([
+                stepPromise,
+                new Promise((_, reject) => {
+                    const timer = setTimeout(() => reject(new Error('Step timeout (2min)')), stepTimeout)
+                    signal.addEventListener('abort', () => {
+                        clearTimeout(timer)
+                        reject(new Error('Execution cancelled'))
+                    })
+                })
+            ])
+
         } catch (stepError: unknown) {
             console.error(`Step failed: ${step.action}`, stepError)
             throw stepError
@@ -86,9 +140,7 @@ export async function runTestCase(
 
     updateCallback({ progress: 100 })
     
-    await browser.close()
-    browser = undefined
-
+    // Cleanup will be handled in finally
     // Verify report file exists
     const expectedReportPath = path.join(reportRoot, `${reportId}.html`)
     let finalReportPath = `${reportId}.html`
@@ -111,7 +163,14 @@ export async function runTestCase(
 
   } catch (e: unknown) {
     console.error('Execution failed:', e)
-    if (browser) await browser.close()
     return { status: 'failed', errorMessage: e instanceof Error ? e.message : String(e) }
+  } finally {
+    if (executionId) {
+        runningExecutions.delete(executionId)
+    }
+    if (browser) {
+        await browser.close().catch(() => {})
+    }
   }
 }
+

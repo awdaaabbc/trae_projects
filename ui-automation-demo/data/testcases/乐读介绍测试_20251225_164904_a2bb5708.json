@@ -64,7 +64,6 @@
       "action": "乐读，让我快乐读书。”"
     }
   ],
-  "status": "done",
-  "lastRunAt": 1766652516524,
-  "lastReportPath": "/Users/ledu/Documents/trae_projects/ui-automation-demo/midscene_run/report/exe-1766652415204-a2bb5708-04b2-449c-94e5-9e7050466232.html"
+  "status": "error",
+  "lastRunAt": 1766736491669
 }

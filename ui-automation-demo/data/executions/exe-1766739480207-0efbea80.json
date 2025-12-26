@@ -1,0 +1,9 @@
+{
+  "id": "exe-1766739480207-0efbea80",
+  "caseId": "sample-login",
+  "status": "failed",
+  "progress": 100,
+  "createdAt": 1766739480207,
+  "updatedAt": 1766739621003,
+  "errorMessage": "Step timeout (2min)"
+}

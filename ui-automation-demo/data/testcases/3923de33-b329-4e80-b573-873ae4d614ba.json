@@ -1,0 +1,30 @@
+{
+  "id": "3923de33-b329-4e80-b573-873ae4d614ba",
+  "name": "",
+  "description": "",
+  "steps": [
+    {
+      "id": "u1766645441739-0",
+      "action": "打开 https://www.baidu.com"
+    },
+    {
+      "id": "u1766645441739-1",
+      "action": "在搜索框输入 \"MidScene AI\""
+    },
+    {
+      "id": "u1766645441739-2",
+      "action": "点击 \"百度一下\" 按钮"
+    },
+    {
+      "id": "u1766645441739-3",
+      "action": "断言: 搜索结果页包含 \"MidScene\""
+    },
+    {
+      "id": "u1766645441739-4",
+      "action": "查询: 页面第一条搜索结果的标题"
+    }
+  ],
+  "status": "done",
+  "lastRunAt": 1766645499947,
+  "lastReportPath": "/Users/ledu/Documents/trae_projects/ui-automation-demo/midscene_run/report/exe-1766645461255-3923de33-b329-4e80-b573-873ae4d614ba.html"
+}

@@ -1,0 +1,9 @@
+{
+  "id": "exe-1766720228605-260",
+  "caseId": "8a583ba9-3a99-4cc7-b6a1-89e4cc78750d",
+  "status": "failed",
+  "progress": 100,
+  "createdAt": 1766720228605,
+  "updatedAt": 1766720240713,
+  "errorMessage": "page.goto: Target page, context or browser has been closed\npage.goto: Target page, context or browser has been closed\n    at WebPage.navigate (/Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/@midscene/web/dist/es/puppeteer/base-page.mjs:357:81)\n    at WebPage.call (/Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/@midscene/web/dist/es/web-page.mjs:214:28)\n    at Object.executor (/Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/@midscene/core/dist/es/agent/task-builder.mjs:160:44)\n    at async TaskRunner.flush (/Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/@midscene/core/dist/es/task-runner.mjs:149:72)\n    at async TaskExecutor.action (/Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/@midscene/core/dist/es/agent/tasks.mjs:172:17)\n    at async PlaywrightAgent.aiAct (/Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/@midscene/core/dist/es/agent/agent.mjs:349:28)\n    at async runTestCase (/Users/ledu/Documents/trae_projects/ui-automation-demo/dist/server/runner.js:56:21)\n    at async file:///Users/ledu/Documents/trae_projects/ui-automation-demo/dist/server/index.js:76:24"
+}

@@ -1,0 +1,9 @@
+{
+  "id": "exe-1766661667127",
+  "caseId": "ai-demo-github",
+  "status": "failed",
+  "progress": 26,
+  "createdAt": 1766661667127,
+  "updatedAt": 1766661679724,
+  "errorMessage": "No actions found in UI-TARS response.\n\nRaw response: Thought: 任务是打开指定的GitHub搜索链接。首先需要启动浏览器（如Chrome），然后在地址栏输入网址。当前屏幕空白，推测需先打开浏览器。若浏览器已启动，下一步是点击地址栏，输入`https://github.com/search?q=Midscene&type=repositories`并回车。  \n总结：打开浏览器，激活地址栏，输入网址并访问。  \nAction: click(start_box='<bbox>10 10 10 10</bbox>')  # 假设点击桌面浏览器图标（如Chrome）启动浏览器，实际需根据环境调整，此处为示意步骤起点。后续需在地址栏输入网址。\nError: No actions found in UI-TARS response.\n\nRaw response: Thought: 任务是打开指定的GitHub搜索链接。首先需要启动浏览器（如Chrome），然后在地址栏输入网址。当前屏幕空白，推测需先打开浏览器。若浏览器已启动，下一步是点击地址栏，输入`https://github.com/search?q=Midscene&type=repositories`并回车。  \n总结：打开浏览器，激活地址栏，输入网址并访问。  \nAction: click(start_box='<bbox>10 10 10 10</bbox>')  # 假设点击桌面浏览器图标（如Chrome）启动浏览器，实际需根据环境调整，此处为示意步骤起点。后续需在地址栏输入网址。\n    at uiTarsPlanning (/Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/@midscene/core/src/ai-model/ui-tars-planning.ts:282:11)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async Object.executor (/Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/@midscene/core/src/agent/tasks.ts:270:32)\n    at async TaskRunner.flush (/Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/@midscene/core/src/task-runner.ts:297:25)\n    at async TaskExecutor.action (/Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/@midscene/core/src/agent/tasks.ts:239:22)\n    at async PlaywrightAgent.aiAct (/Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/@midscene/core/src/agent/agent.ts:893:24)\n    at async runTestCase (/Users/ledu/Documents/trae_projects/ui-automation-demo/server/runner.ts:79:11)\n    at async <anonymous> (/Users/ledu/Documents/trae_projects/ui-automation-demo/server/index.ts:84:20)"
+}

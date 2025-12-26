@@ -1,0 +1,6 @@
+{
+  "watch": ["dist/server/"],
+  "ext": "js,json",
+  "exec": "node dist/server/index.js",
+  "verbose": true
+}

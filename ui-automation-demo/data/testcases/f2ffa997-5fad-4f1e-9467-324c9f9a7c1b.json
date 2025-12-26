@@ -1,0 +1,30 @@
+{
+  "id": "f2ffa997-5fad-4f1e-9467-324c9f9a7c1b",
+  "name": "测试查询断言",
+  "description": "测试查询断言",
+  "steps": [
+    {
+      "id": "u1766649163814-0",
+      "type": "action",
+      "action": "打开www.baidu.com"
+    },
+    {
+      "id": "u1766649163814-1",
+      "type": "action",
+      "action": "找到输入框，输入midscene.js，点击搜索按钮"
+    },
+    {
+      "id": "u1766649163814-2",
+      "type": "query",
+      "action": "查询当前界面是否包含midscene"
+    },
+    {
+      "id": "u1766649163814-3",
+      "type": "assert",
+      "action": "当前界面应该包括midscene"
+    }
+  ],
+  "status": "done",
+  "lastRunAt": 1766649265867,
+  "lastReportPath": "/Users/ledu/Documents/trae_projects/ui-automation-demo/midscene_run/report/exe-1766649184861-f2ffa997-5fad-4f1e-9467-324c9f9a7c1b.html"
+}

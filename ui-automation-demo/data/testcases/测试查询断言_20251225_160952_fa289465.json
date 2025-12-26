@@ -1,0 +1,24 @@
+{
+  "id": "fa289465-1e6f-4c6b-a353-5a98a60efa40",
+  "name": "测试查询断言",
+  "description": "测试存储的用例能否对应query与assert",
+  "steps": [
+    {
+      "id": "u1766650192773-0",
+      "type": "action",
+      "action": "打开百度搜索www.baidu.com"
+    },
+    {
+      "id": "u1766650192774-1",
+      "type": "query",
+      "action": "搜索界面是否包含百度一下下下下"
+    },
+    {
+      "id": "u1766650192774-2",
+      "type": "assert",
+      "action": "搜索到的结果包含百度一下"
+    }
+  ],
+  "status": "error",
+  "lastRunAt": 1766648919351
+}

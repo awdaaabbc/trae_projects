@@ -1,0 +1,9 @@
+{
+  "id": "exe-1766648356196",
+  "caseId": "fa289465-1e6f-4c6b-a353-5a98a60efa40",
+  "status": "failed",
+  "progress": 33,
+  "createdAt": 1766648356196,
+  "updatedAt": 1766648365437,
+  "errorMessage": "page.goto: Protocol error (Page.navigate): Cannot navigate to invalid URL\nCall log:\n\u001b[2m  - navigating to \"www.baidu.com\", waiting until \"load\"\u001b[22m\n\npage.goto: Protocol error (Page.navigate): Cannot navigate to invalid URL\nCall log:\n\u001b[2m  - navigating to \"www.baidu.com\", waiting until \"load\"\u001b[22m\n\n    at WebPage.navigate (/Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/@midscene/web/src/puppeteer/base-page.ts:567:53)\n    at WebPage.call (/Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/@midscene/web/src/web-page.ts:642:18)\n    at Object.executor (/Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/@midscene/core/src/agent/task-builder.ts:314:36)\n    at async TaskRunner.flush (/Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/@midscene/core/src/task-runner.ts:304:25)\n    at async TaskExecutor.action (/Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/@midscene/core/src/agent/tasks.ts:363:9)\n    at async PlaywrightAgent.aiAct (/Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/@midscene/core/src/agent/agent.ts:893:24)\n    at async runTestCase (/Users/ledu/Documents/trae_projects/ui-automation-demo/server/runner.ts:74:11)\n    at async <anonymous> (/Users/ledu/Documents/trae_projects/ui-automation-demo/server/index.ts:65:20)"
+}

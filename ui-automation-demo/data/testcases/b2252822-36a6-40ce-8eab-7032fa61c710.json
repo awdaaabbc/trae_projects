@@ -1,0 +1,30 @@
+{
+  "id": "b2252822-36a6-40ce-8eab-7032fa61c710",
+  "name": "测试存储",
+  "description": "存储",
+  "steps": [
+    {
+      "id": "u1766560404294-0",
+      "action": "打开 https://github.com/search?q=Midscene&type=repositories"
+    },
+    {
+      "id": "u1766560404294-1",
+      "action": "点击第一个搜索结果的标题链接"
+    },
+    {
+      "id": "u1766560404294-2",
+      "action": "检查页面是否包含 \"Readme\" 文本"
+    },
+    {
+      "id": "u1766560404294-3",
+      "action": "点击 Star 按钮"
+    },
+    {
+      "id": "u1766560404294-4",
+      "action": "在搜索框中输入 \"Playwright\" 并回车"
+    }
+  ],
+  "status": "done",
+  "lastRunAt": 1766644700944,
+  "lastReportPath": "/Users/ledu/Documents/trae_projects/ui-automation-demo/midscene_run/report/exe-1766644652762-b2252822-36a6-40ce-8eab-7032fa61c710.html"
+}

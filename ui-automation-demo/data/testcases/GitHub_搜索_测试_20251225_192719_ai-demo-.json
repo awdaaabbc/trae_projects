@@ -1,0 +1,30 @@
+{
+  "id": "ai-demo-github",
+  "name": "GitHub 搜索 测试",
+  "description": "使用自然语言指令搜索 GitHub，演示 Midscene 的语义理解能力（需要配置模型）",
+  "steps": [
+    {
+      "id": "u1766661305450-0",
+      "type": "action",
+      "action": "打开 https://github.com/search?q=Midscene&type=repositories"
+    },
+    {
+      "id": "u1766661305450-1",
+      "type": "action",
+      "action": "点击第一个搜索结果的标题链接"
+    },
+    {
+      "id": "u1766661305450-2",
+      "type": "action",
+      "action": "检查页面是否包含 \"Readme\" 文本，如果当前页没有向下滚动，直至找到\"Readme\" 文本或滚动到页面底端"
+    },
+    {
+      "id": "u1766661305450-3",
+      "type": "assert",
+      "action": "包含readme"
+    }
+  ],
+  "status": "done",
+  "lastRunAt": 1766662039402,
+  "lastReportPath": "/Users/ledu/Documents/trae_projects/ui-automation-demo/midscene_run/report/exe-1766661981986-ai-demo-github.html"
+}

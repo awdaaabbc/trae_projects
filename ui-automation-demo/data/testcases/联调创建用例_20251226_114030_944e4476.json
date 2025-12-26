@@ -1,0 +1,15 @@
+{
+  "id": "944e4476-47e6-40ec-9db2-d18df37ef3d6",
+  "name": "联调创建用例",
+  "description": "用于接口契约回归测试",
+  "steps": [
+    {
+      "id": "s1",
+      "type": "action",
+      "action": "打开 https://example.com"
+    }
+  ],
+  "status": "done",
+  "lastRunAt": 1766720430443,
+  "lastReportPath": "exe-1766720429440-944e4476-47e6-40ec-9db2-d18df37ef3d6.html"
+}

@@ -1,0 +1,57 @@
+{
+  "id": "sample-login",
+  "name": "SauceDemo 登录下单流程",
+  "description": "访问 saucedemo.com，登录后添加商品到购物车并结账（演示用）",
+  "steps": [
+    {
+      "id": "s1",
+      "action": "打开 https://www.saucedemo.com/"
+    },
+    {
+      "id": "s2",
+      "action": "在 Username 输入 standard_user"
+    },
+    {
+      "id": "s3",
+      "action": "在 Password 输入 secret_sauce"
+    },
+    {
+      "id": "s4",
+      "action": "点击 Login"
+    },
+    {
+      "id": "s5",
+      "action": "点击 第一个商品的 Add to cart"
+    },
+    {
+      "id": "s6",
+      "action": "点击 购物车"
+    },
+    {
+      "id": "s7",
+      "action": "点击 Checkout"
+    },
+    {
+      "id": "s8",
+      "action": "在 First Name 输入 Jane"
+    },
+    {
+      "id": "s9",
+      "action": "在 Last Name 输入 Doe"
+    },
+    {
+      "id": "s10",
+      "action": "在 Zip/Postal Code 输入 12345"
+    },
+    {
+      "id": "s11",
+      "action": "点击 Continue"
+    },
+    {
+      "id": "s12",
+      "action": "点击 Finish"
+    }
+  ],
+  "status": "error",
+  "lastRunAt": 1766661788736
+}

@@ -21,4 +21,5 @@ export interface Execution {
   updatedAt: number;
   reportPath?: string;
   errorMessage?: string;
+  fileName?: string;
 }

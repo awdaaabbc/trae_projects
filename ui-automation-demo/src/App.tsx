@@ -61,6 +61,7 @@ type Execution = {
   updatedAt: number
   reportPath?: string
   errorMessage?: string
+  fileName?: string
 }
 
 async function api<T>(url: string, init?: RequestInit) {
@@ -465,7 +466,12 @@ function App() {
                           >
                             <List.Item.Meta
                               avatar={getStatusTag(item.status)}
-                              title={<span>执行ID: {item.id}</span>}
+                              title={
+                                <Space>
+                                  <span>执行ID: {item.id}</span>
+                                  {item.fileName && <Tag color="default" style={{ fontSize: '12px' }}>{item.fileName}</Tag>}
+                                </Space>
+                              }
                               description={
                                 <Space direction="vertical" size={0}>
                                   <Text type="secondary">{formatTime(item.updatedAt)}</Text>

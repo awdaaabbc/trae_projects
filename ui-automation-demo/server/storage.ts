@@ -68,18 +68,36 @@ function formatDate(ts: number) {
 
 // Save case to disk
 function persistCase(tc: TestCase) {
+  const sanitizedName = sanitizeFilename(tc.name)
   const existingFile = caseFileById[tc.id]
-  const existingPath = existingFile ? path.join(DATA_DIR, existingFile) : null
-  const hasExisting = !!existingPath && fs.existsSync(existingPath)
+  
+  let fileNameToUse = existingFile
+  
+  if (existingFile) {
+     const prefix = `${sanitizedName}_`
+     if (!existingFile.startsWith(prefix)) {
+        // Name changed, trigger rename
+        const newFileName = `${sanitizedName}_${formatDate(Date.now())}_${tc.id.substring(0, 8)}.json`
+        const oldPath = path.join(DATA_DIR, existingFile)
+        const newPath = path.join(DATA_DIR, newFileName)
+        try {
+           if (fs.existsSync(oldPath)) {
+              fs.renameSync(oldPath, newPath)
+              fileNameToUse = newFileName
+              caseFileById[tc.id] = newFileName
+           }
+        } catch(e) {
+           console.error('Rename failed', e)
+        }
+     }
+  } else {
+     // New file
+     fileNameToUse = `${sanitizedName}_${formatDate(Date.now())}_${tc.id.substring(0, 8)}.json`
+     caseFileById[tc.id] = fileNameToUse
+  }
 
-  const fileName =
-    hasExisting
-      ? existingFile
-      : `${sanitizeFilename(tc.name)}_${formatDate(Date.now())}_${tc.id.substring(0, 8)}.json`
-
-  const filePath = path.join(DATA_DIR, fileName)
+  const filePath = path.join(DATA_DIR, fileNameToUse)
   fs.writeFileSync(filePath, JSON.stringify(tc, null, 2), 'utf-8')
-  caseFileById[tc.id] = fileName
 }
 
 // Save execution to disk
@@ -101,6 +119,12 @@ function reloadCases() {
 
 export const Storage = {
   reloadCases, // Export reload function
+  generateExecutionId(tcName: string) {
+    return `${sanitizeFilename(tcName)}_${formatDate(Date.now())}`
+  },
+  getCaseFilename(id: string) {
+    return caseFileById[id]
+  },
   listCases(): TestCase[] {
     reloadCases() // Ensure we always return fresh data from disk
     return Object.values(cases)

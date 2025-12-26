@@ -106,8 +106,12 @@ app.post('/api/execute/:id', async (req: Request, res: Response) => {
   const id = req.params.id
   const tc = Storage.getCase(id)
   if (!tc) return res.status(404).json({ error: '未找到测试用例' })
+
+  const fileName = Storage.getCaseFilename(id)
+  console.log(`Executing case: ${tc.name}, File: ${fileName}`)
+
   Storage.updateCase(id, { status: 'running' })
-  const exeId = `exe-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`
+  const exeId = Storage.generateExecutionId(tc.name)
   const createdAt = Date.now()
   const exe: Execution = {
     id: exeId,
@@ -116,6 +120,7 @@ app.post('/api/execute/:id', async (req: Request, res: Response) => {
     progress: 0,
     createdAt,
     updatedAt: createdAt,
+    fileName,
   }
   Storage.saveExecution(exe)
   broadcast({ type: 'execution', payload: Storage.getExecution(exeId) })

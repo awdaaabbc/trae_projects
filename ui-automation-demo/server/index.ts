@@ -146,10 +146,10 @@ app.post('/api/execute/:id', async (req: Request, res: Response) => {
   res.json({ data: Storage.getExecution(exeId) })
 })
 
-app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
+app.use((err: unknown, req: Request, res: Response, next: NextFunction) => {
   const requestId = (req as Request & { requestId?: string }).requestId || '-'
   console.error(`[error] ${requestId} ${req.method} ${req.originalUrl}`, err)
-  if (res.headersSent) return
+  if (res.headersSent) return next(err as Error)
 
   const anyErr = err as { type?: unknown }
   const isJsonSyntaxError = err instanceof SyntaxError && anyErr.type === 'entity.parse.failed'

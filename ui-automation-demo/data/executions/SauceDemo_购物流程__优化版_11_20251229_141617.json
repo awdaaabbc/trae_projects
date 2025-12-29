@@ -1,0 +1,10 @@
+{
+  "id": "SauceDemo_购物流程__优化版_11_20251229_141617",
+  "caseId": "saucedemo-optimized-flow",
+  "status": "failed",
+  "progress": 100,
+  "createdAt": 1766988977369,
+  "updatedAt": 1766989129860,
+  "fileName": "SauceDemo_购物流程__优化版_11_20251226_172930_saucedem.json",
+  "errorMessage": "Assertion failed: 页面中心应显示大写的 \"THANK YOU FOR YOUR ORDER\"\nReason: 查看截图，页面中心显示的文字是 'Thank you for your order!'，并非全大写的 'THANK YOU FOR YOUR ORDER'，因此该陈述为假。"
+}

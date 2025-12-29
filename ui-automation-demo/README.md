@@ -1,19 +1,55 @@
 # React + TypeScript + Vite
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+该模板提供了一个最小化的设置，用于在 Vite 中使用 React，支持 HMR（热模块替换）和一些 ESLint 规则。
 
-Currently, two official plugins are available:
+## Getting Started / 项目启动准备
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+如果这是你第一次拉取本项目，请按照以下步骤进行环境准备：
 
-## React Compiler
+### 1. 安装依赖
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+# 安装 Node.js 依赖
+npm install
 
-## Expanding the ESLint configuration
+# 安装 Playwright 浏览器二进制文件 (必须)
+npx playwright install
+```
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### 2. 环境变量配置
+
+复制 `.env.example` 为 `.env`，并填入必要的模型配置：
+
+```bash
+cp .env.example .env
+```
+
+编辑 `.env` 文件，配置 `MIDSCENE_MODEL_API_KEY` 等参数以启用 AI 功能。
+
+### 3. 启动项目
+
+```bash
+# 使用一键启动脚本
+./start.sh
+
+# 或者手动启动
+npm run dev
+```
+
+---
+
+目前，有两个官方插件可用：
+
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) 使用 [Babel](https://babeljs.io/) (或在 [rolldown-vite](https://vite.dev/guide/rolldown) 中使用 [oxc](https://oxc.rs)) 实现快速刷新
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) 使用 [SWC](https://swc.rs/) 实现快速刷新
+
+## React 编译器
+
+由于对开发和构建性能的影响，本模板默认未启用 React 编译器。如需添加，请参阅[此文档](https://react.dev/learn/react-compiler/installation)。
+
+## 扩展 ESLint 配置
+
+如果你正在开发生产级应用，我们建议更新配置以启用类型感知的 lint 规则：
 
 ```js
 export default defineConfig([
@@ -21,29 +57,29 @@ export default defineConfig([
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
-      // Other configs...
+      // 其他配置...
 
-      // Remove tseslint.configs.recommended and replace with this
+      // 移除 tseslint.configs.recommended 并替换为以下内容
       tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
+      // 或者使用更严格的规则
       tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
+      // 可选：添加样式规则
       tseslint.configs.stylisticTypeChecked,
 
-      // Other configs...
+      // 其他配置...
     ],
     languageOptions: {
       parserOptions: {
         project: ['./tsconfig.node.json', './tsconfig.app.json'],
         tsconfigRootDir: import.meta.dirname,
       },
-      // other options...
+      // 其他选项...
     },
   },
 ])
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+你也可以安装 [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) 和 [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) 来获取 React 特定的 lint 规则：
 
 ```js
 // eslint.config.js
@@ -55,10 +91,10 @@ export default defineConfig([
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
-      // Other configs...
-      // Enable lint rules for React
+      // 其他配置...
+      // 启用 React lint 规则
       reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
+      // 启用 React DOM lint 规则
       reactDom.configs.recommended,
     ],
     languageOptions: {
@@ -66,7 +102,7 @@ export default defineConfig([
         project: ['./tsconfig.node.json', './tsconfig.app.json'],
         tsconfigRootDir: import.meta.dirname,
       },
-      // other options...
+      // 其他选项...
     },
   },
 ])

@@ -1,0 +1,13 @@
+{
+  "id": "86c2b91a-ae36-4c2c-a443-05505e047aea",
+  "name": "123",
+  "description": "123",
+  "steps": [
+    {
+      "id": "u1766741457018-0",
+      "type": "action",
+      "action": "123"
+    }
+  ],
+  "status": "idle"
+}

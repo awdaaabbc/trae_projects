@@ -2,6 +2,7 @@ export interface TestCase {
   id: string;
   name: string;
   description: string;
+  platform: 'web' | 'android';
   steps: Array<{
     id: string;
     action: string;

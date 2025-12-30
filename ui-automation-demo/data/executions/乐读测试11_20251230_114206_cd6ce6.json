@@ -1,0 +1,10 @@
+{
+  "id": "乐读测试11_20251230_114206_cd6ce6",
+  "caseId": "d4748684-c864-42e0-ac49-96f9ec77daa0",
+  "status": "failed",
+  "progress": 100,
+  "createdAt": 1767066126860,
+  "updatedAt": 1767066279686,
+  "fileName": "乐读测试11_20251230_114201_d4748684.json",
+  "errorMessage": "Step timeout (2min)"
+}

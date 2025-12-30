@@ -1,0 +1,26 @@
+{
+  "id": "d4748684-c864-42e0-ac49-96f9ec77daa0",
+  "name": "乐读测试11",
+  "description": "搜索小班生物课程",
+  "platform": "android",
+  "steps": [
+    {
+      "id": "u1767073996558-0",
+      "type": "action",
+      "action": "点击带有乐读小班的图标的APP"
+    },
+    {
+      "id": "u1767073996558-1",
+      "type": "action",
+      "action": "等待几秒钟，若出现任何弹窗请关闭"
+    },
+    {
+      "id": "u1767073996558-2",
+      "type": "query",
+      "action": "{introduction:string}查询页面上所有内容并返回"
+    }
+  ],
+  "status": "done",
+  "lastRunAt": 1767074059367,
+  "lastReportPath": "乐读测试11_20251230_135334_ae2afd-d4748684-c864-42e0-ac49-96f9ec77daa0.html"
+}

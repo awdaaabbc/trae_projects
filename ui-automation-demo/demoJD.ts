@@ -39,7 +39,7 @@ Promise.resolve(
     // 或者使用 device.launchApp('com.dadaabc.zhuozan.dadateacher') 显式启动
     
     // 确保在正确的页面
-    await agent.aiAct('点击京东app图标，点击搜索框');
+    await agent.aiAct('点击京东app图标，点击上方首页下的搜索框');
     // 注意：adb shell input text 不支持直接输入中文字符，需要使用 Base64 或专用输入法
     // 这里改用 MidScene 的 aiAct 来处理输入，或者输入英文/数字
     await agent.aiAct('输入雅迪电动车，点击搜索按钮'); 

@@ -31,7 +31,7 @@ Promise.resolve(
     // 这里的 context 非常重要，告诉 AI 如何处理国内常见的“打开APP查看”或权限弹窗
     const agent = new AndroidAgent(device, {
       aiActionContext:
-        '如果在操作过程中出现定位、权限、用户协议等弹窗，点击“同意”或“允许”。'
+        '如果在操作过程中出现定位、权限、用户协议等弹窗，点击“同意”或“允许，或右滑微信弹窗”。'
     });
 
     await device.connect();
@@ -44,11 +44,26 @@ Promise.resolve(
     // 或者使用 device.launchApp('com.dadaabc.zhuozan.dadateacher') 显式启动
     
     // 确保在正确的页面
-    await agent.aiAct('点击乐读app(图标是乐读小班)，点击搜索框');
-    // 注意：adb shell input text 不支持直接输入中文字符，需要使用 Base64 或专用输入法
-    // 这里改用 MidScene 的 aiAct 来处理输入，或者输入英文/数字
-    await agent.aiAct('输入小班物理，输入完毕后按下回车键'); 
-    // await agent.aiAct('点击输入法界面右下角的搜索按钮');
+    await agent.aiAct('点击乐读app(图标是乐读小班)，如果当前界面不包含任何app图标，请返回主界面，左右滑动直到出现乐读图标，点击打开');
+    await agent.aiAct('进入课程搜索页，如果出现权限/协议/引导弹窗，全部关闭或同意');
+    await agent.aiAct('点击搜索框，直到出现输入光标');
+    await agent.aiAct('如果搜索框里已有文字，长按搜索框，点击全选，然后删除清空');
+    await agent.aiAct('输入小班化学');
+    await agent.aiAct('长按搜索框直至出现粘贴界面，点击粘贴');
+    await agent.aiAct('如果没有出现“粘贴”，再次长按搜索框直到出现“粘贴”，然后点击“粘贴”，如果搜索框已经包含”小班化学“请忽略');
+    // await agent.aiAct('确认搜索框里出现“小班物理”');
+    await agent.aiAct('按下回车键');
+
+    //  await agent.aiAct('点击乐读app(图标是乐读小班)，如果当前界面不包含任何app图标，请返回主界面，左右滑动直到出现乐读图标，点击打开');
+    // await agent.aiAct('进入课程搜索页，如果出现权限/协议/引导弹窗，全部关闭或同意');
+    // await agent.aiAct('点击搜索框，直到出现输入光标');
+    // await agent.aiAct('如果搜索框里已有文字，长按搜索框，点击全选，然后删除清空');
+    // try {
+    //   await device.keyboardType('小班物理');
+    //   await agent.runAdbShell('input keyevent 66');
+    // } catch {
+    //   await agent.aiAct('输入小班物理，输入完毕后按下回车键');
+    // }
     // 强制发送一个回车信号
     // const adb = await device.getAdb();
     // await adb.shell(['input', 'keyevent', '66']);

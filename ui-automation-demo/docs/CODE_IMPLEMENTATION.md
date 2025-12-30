@@ -22,6 +22,7 @@ export type TestCase = {
   id: string
   name: string
   description?: string
+  platform: 'web' | 'android'
   steps: TestStep[]
   status: 'idle' | 'running' | 'done' | 'error' // 当前状态
   lastRunAt?: number    // 最后执行时间戳
@@ -33,6 +34,7 @@ export type TestCase = {
 ```mermaid
 graph TD
     A[前端 App.tsx] -->|用户输入自然语言| B(createCase 方法)
+    A -->|平台选择 Web/Android| P[platform 字段]
     B -->|解析前缀 查询:/断言:| C{识别步骤类型}
     C -->|是查询| D[type='query']
     C -->|是断言| E[type='assert']
@@ -77,6 +79,31 @@ graph TD
 - **MidScene 集成**:
   - 利用 `PlaywrightAgent` 代理常规操作。
   - 通过 `generateReport: true` 配置，让 MidScene 自动收集执行过程中的截图、DOM 树和 AI 思考过程。
+
+### 2.3 平台化执行路由（Web/Android 一致 API）
+
+执行入口统一在 `server/index.ts`：
+
+- `POST /api/execute/:id`：创建一条 execution 并异步执行
+- `POST /api/stop-execution/:id`：停止执行
+
+关键点：
+
+- **接口保持一致**：前端不需要因为平台不同切换接口路径或参数结构。
+- **路由基于用例 platform**：后端根据 `TestCase.platform` 选择对应 runner（Web -> `server/runner.ts`，Android -> `server/runner.android.ts`）。
+
+### 2.4 Android 执行引擎（独立 runner）
+
+Android 执行逻辑独立放在 `server/runner.android.ts`，与 Web runner 不共用实现文件，保证依赖与适配层隔离：
+
+- **独立依赖导入机制**：通过动态导入 `@midscene/android`，避免 Web runner 的依赖链被 Android 侧影响。
+- **核心执行逻辑对齐**：保持与 Web runner 相同的核心结构（进度回调、逐步执行、报告文件名规则、统一 RunResult）。
+- **Android 特定适配层**：使用 `AndroidDevice/AndroidAgent`，将 `action/query/assert` 映射为 `aiAct/aiQuery/aiAssert`。
+- **资源清理与取消**：执行结束或取消时销毁设备连接，避免悬挂资源。
+
+### 2.5 执行 ID 生成与并发唯一性
+
+Execution ID 由 `server/storage.ts` 生成。为支持并发执行场景，ID 会包含随机后缀，避免同一秒内多次触发导致碰撞。
 
 ---
 

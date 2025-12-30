@@ -12,6 +12,7 @@ import {
   Modal,
   Form,
   Input,
+  Select,
   message,
   Progress,
   Empty,
@@ -47,6 +48,7 @@ type TestCase = {
   id: string
   name: string
   description?: string
+  platform: 'web' | 'android'
   steps: TestStep[]
   status: 'idle' | 'running' | 'done' | 'error'
   lastRunAt?: number
@@ -125,6 +127,7 @@ function App() {
     id: '',
     name: '',
     description: '',
+    platform: 'web' as 'web' | 'android',
     stepsText: '',
   })
   
@@ -199,6 +202,7 @@ function App() {
           id: selected.id,
           name: selected.name,
           description: selected.description || '',
+          platform: selected.platform || 'web',
           stepsText: selected.steps.map((s) => {
             if (s.type === 'query') return `查询: ${s.action}`
             if (s.type === 'assert') return `断言: ${s.action}`
@@ -210,7 +214,7 @@ function App() {
       // If no selection, reset form only if it has an ID (meaning it was editing something)
       // If it has no ID, user might be typing a new case, so don't clear blindly unless we explicitly want to
       if (creating.id) {
-        setCreating({ id: '', name: '', description: '', stepsText: '' })
+        setCreating({ id: '', name: '', description: '', platform: 'web', stepsText: '' })
       }
     }
   }, [selected, creating.id])
@@ -244,13 +248,20 @@ function App() {
           body: JSON.stringify({
             name: creating.name,
             description: creating.description,
+            platform: creating.platform,
             steps,
           }),
         })
         setCases((prev) =>
           prev.map((c) =>
             c.id === creating.id
-              ? { ...c, name: creating.name, description: creating.description, steps }
+              ? {
+                  ...c,
+                  name: creating.name,
+                  description: creating.description,
+                  platform: creating.platform,
+                  steps,
+                }
               : c,
           ),
         )
@@ -262,6 +273,7 @@ function App() {
           body: JSON.stringify({
             name: creating.name,
             description: creating.description,
+            platform: creating.platform,
             steps,
           }),
         })
@@ -309,7 +321,7 @@ function App() {
   // UI Handlers
   const handleCreateClick = () => {
     setSelectedCase(null)
-    setCreating({ id: '', name: '', description: '', stepsText: '' })
+    setCreating({ id: '', name: '', description: '', platform: 'web', stepsText: '' })
     setIsModalOpen(true)
   }
 
@@ -526,6 +538,16 @@ function App() {
               onChange={(e) => setCreating(s => ({ ...s, description: e.target.value }))}
               placeholder="请输入用例描述"
               rows={2}
+            />
+          </Form.Item>
+          <Form.Item label="平台选择" required>
+            <Select
+              value={creating.platform}
+              onChange={(platform) => setCreating((s) => ({ ...s, platform }))}
+              options={[
+                { value: 'web', label: 'Web' },
+                { value: 'android', label: 'Android' },
+              ]}
             />
           </Form.Item>
           <Form.Item label="测试步骤" help="每行一条。支持前缀 '查询:' 或 '断言:'">

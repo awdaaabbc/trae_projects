@@ -7,7 +7,11 @@ import crypto from 'node:crypto'
 import dotenv from 'dotenv'
 import { Storage } from './storage.js'
 import type { Execution, TestCase } from './types.js'
-import { runTestCase, cancelExecution } from './runner.js'
+import { runTestCase as runWebTestCase, cancelExecution as cancelWebExecution } from './runner.js'
+import {
+  runTestCase as runAndroidTestCase,
+  cancelExecution as cancelAndroidExecution,
+} from './runner.android.js'
 
 dotenv.config()
 
@@ -56,11 +60,18 @@ app.post('/api/testcases', (req: Request, res: Response) => {
     const body = req.body as Partial<TestCase> & { id?: string }
     const id = body.id || crypto.randomUUID()
     const existing = Storage.getCase(id)
+    const platform =
+      body.platform === 'android'
+        ? 'android'
+        : body.platform === 'web'
+          ? 'web'
+          : existing?.platform || 'web'
     
     const tc: TestCase = {
       id,
       name: body.name || '',
       description: body.description || '',
+      platform,
       steps: Array.isArray(body.steps) ? body.steps : [],
       status: existing ? existing.status : 'idle',
       lastRunAt: existing?.lastRunAt,
@@ -85,6 +96,12 @@ app.put('/api/testcases/:id', (req: Request, res: Response) => {
     ...tc,
     name: body.name || tc.name,
     description: body.description || tc.description,
+    platform:
+      body.platform === 'android'
+        ? 'android'
+        : body.platform === 'web'
+          ? 'web'
+          : tc.platform,
     steps: Array.isArray(body.steps) ? body.steps : tc.steps,
   }
   Storage.saveCase(updated)
@@ -125,7 +142,8 @@ app.post('/api/execute/:id', async (req: Request, res: Response) => {
   Storage.saveExecution(exe)
   broadcast({ type: 'execution', payload: Storage.getExecution(exeId) })
   ;(async () => {
-    const result = await runTestCase(tc, exeId, (patch) => {
+    const runner = tc.platform === 'android' ? runAndroidTestCase : runWebTestCase
+    const result = await runner(tc, exeId, (patch) => {
       const normalizedPatch =
         patch.reportPath ? { ...patch, reportPath: normalizeReportPath(patch.reportPath) } : patch
       Storage.updateExecution(exeId, normalizedPatch)
@@ -167,7 +185,14 @@ app.post('/api/stop-execution/:id', (req: Request, res: Response) => {
   const id = req.params.id
   if (!id) return res.status(400).json({ error: 'Missing execution ID' })
   
-  const success = cancelExecution(id)
+  const exe = Storage.getExecution(id)
+  const tc = exe ? Storage.getCase(exe.caseId) : undefined
+  const success =
+    tc?.platform === 'android'
+      ? cancelAndroidExecution(id)
+      : tc?.platform === 'web'
+        ? cancelWebExecution(id)
+        : cancelWebExecution(id) || cancelAndroidExecution(id)
   if (success) {
     res.json({ ok: true })
   } else {

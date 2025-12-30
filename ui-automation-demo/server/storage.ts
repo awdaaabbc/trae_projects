@@ -2,6 +2,7 @@
 import type { Execution, TestCase } from './types.js'
 import fs from 'node:fs'
 import path from 'node:path'
+import crypto from 'node:crypto'
 
 const DATA_DIR = process.env.UI_AUTOMATION_DATA_DIR
   ? path.resolve(process.env.UI_AUTOMATION_DATA_DIR)
@@ -28,7 +29,17 @@ function loadCases() {
     if (file.endsWith('.json')) {
       try {
         const content = fs.readFileSync(path.join(DATA_DIR, file), 'utf-8')
-        const tc = JSON.parse(content) as TestCase
+        const parsed = JSON.parse(content) as Partial<TestCase>
+        const tc: TestCase = {
+          id: parsed.id || '',
+          name: parsed.name || '',
+          description: parsed.description || '',
+          platform: parsed.platform === 'android' ? 'android' : 'web',
+          steps: Array.isArray(parsed.steps) ? parsed.steps : [],
+          status: parsed.status || 'idle',
+          lastRunAt: parsed.lastRunAt,
+          lastReportPath: parsed.lastReportPath,
+        }
         cases[tc.id] = tc
         caseFileById[tc.id] = file
       } catch (err) {
@@ -120,7 +131,8 @@ function reloadCases() {
 export const Storage = {
   reloadCases, // Export reload function
   generateExecutionId(tcName: string) {
-    return `${sanitizeFilename(tcName)}_${formatDate(Date.now())}`
+    const suffix = crypto.randomBytes(3).toString('hex')
+    return `${sanitizeFilename(tcName)}_${formatDate(Date.now())}_${suffix}`
   },
   getCaseFilename(id: string) {
     return caseFileById[id]

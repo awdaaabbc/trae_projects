@@ -5,21 +5,22 @@
   "platform": "ios",
   "steps": [
     {
-      "id": "u1767163667020-0",
+      "id": "u1767492634659-0",
       "type": "action",
       "action": "打开浏览器，打开ebay官网"
     },
     {
-      "id": "u1767163667020-1",
+      "id": "u1767492634659-1",
       "type": "action",
       "action": "搜索iphone"
     },
     {
-      "id": "u1767163667020-2",
+      "id": "u1767492634659-2",
       "type": "query",
       "action": "{information:string}返回第一个手机的全部信息"
     }
   ],
-  "status": "error",
-  "lastRunAt": 1767173820742
+  "status": "done",
+  "lastRunAt": 1767508344222,
+  "lastReportPath": "测试搜索iphone_20260104_143107640.html"
 }

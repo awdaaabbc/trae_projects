@@ -1,0 +1,16 @@
+{
+  "id": "111_20260104_141055561",
+  "caseId": "68adcaca-33f8-4dbf-9def-26512034bb9a",
+  "status": "failed",
+  "progress": 100,
+  "createdAt": 1767507055561,
+  "updatedAt": 1767507055601,
+  "fileName": "111_20251231_143027_68adcaca.json",
+  "targetAgentId": "agent-ol51odc",
+  "logs": [
+    "2026-01-04T06:10:55.565Z queued",
+    "2026-01-04T06:10:55.567Z started",
+    "2026-01-04T06:10:55.601Z finished: failed"
+  ],
+  "errorMessage": "Unable to connect to iOS device pending-connection: Error: Failed to start WebDriverAgent: Error: WebDriverAgent is not running on localhost:8100. Please start WebDriverAgent manually:\n\n🔧 Setup Instructions:\n1. Install WebDriverAgent: npm install appium-webdriveragent\n2. Build and run WebDriverAgent:\n   - For simulators: Use Xcode to run WebDriverAgentRunner on your target simulator\n   - For real devices: Build WebDriverAgentRunner and install on your device\n3. Ensure WebDriverAgent is listening on localhost:8100\n\n💡 Alternative: You can also specify a different host/port where WebDriverAgent is running."
+}

@@ -1,0 +1,15 @@
+{
+  "id": "测试搜索iphone_20260104_101251539",
+  "caseId": "e20cfea4-d3e7-4d9e-87cb-45994f1b9b00",
+  "status": "failed",
+  "progress": 100,
+  "createdAt": 1767492771539,
+  "updatedAt": 1767492772168,
+  "fileName": "测试搜索iphone_20251231_144747_e20cfea4.json",
+  "logs": [
+    "2026-01-04T02:12:51.539Z queued",
+    "2026-01-04T02:12:51.540Z started",
+    "2026-01-04T02:12:52.168Z finished: failed"
+  ],
+  "errorMessage": "vlMode cannot be undefined when includeBbox is true. A valid vlMode is required for bbox-based location.\nError: vlMode cannot be undefined when includeBbox is true. A valid vlMode is required for bbox-based location.\n    at systemPromptToTaskPlanning (/Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/.pnpm/@midscene+core@1.0.4_ws@8.18.3/node_modules/@midscene/core/src/ai-model/prompt/llm-planning.ts:112:11)\n    at plan (/Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/.pnpm/@midscene+core@1.0.4_ws@8.18.3/node_modules/@midscene/core/src/ai-model/llm-planning.ts:43:30)\n    at Object.executor (/Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/.pnpm/@midscene+core@1.0.4_ws@8.18.3/node_modules/@midscene/core/src/agent/tasks.ts:272:20)\n    at TaskRunner.flush (/Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/.pnpm/@midscene+core@1.0.4_ws@8.18.3/node_modules/@midscene/core/src/task-runner.ts:297:36)\n    at async TaskExecutor.action (/Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/.pnpm/@midscene+core@1.0.4_ws@8.18.3/node_modules/@midscene/core/src/agent/tasks.ts:239:22)\n    at async IOSAgent.aiAct (/Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/.pnpm/@midscene+core@1.0.4_ws@8.18.3/node_modules/@midscene/core/src/agent/agent.ts:893:24)\n    at async <anonymous> (/Users/ledu/Documents/trae_projects/ui-automation-demo/server/runner.ios.ts:150:21)\n    at async runTestCase (/Users/ledu/Documents/trae_projects/ui-automation-demo/server/runner.ios.ts:154:7)\n    at async WebSocket.<anonymous> (/Users/ledu/Documents/trae_projects/ui-automation-demo/agent/index.ts:49:26)"
+}

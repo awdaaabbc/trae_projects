@@ -11,7 +11,10 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "test": "npm run build:server && node --test server/test/*.test.js",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "node -r dotenv/config dist/server/index.js",
+    "agent:ios": "AGENT_PLATFORM=ios tsx agent/index.ts",
+    "agent:android": "AGENT_PLATFORM=android tsx agent/index.ts"
   },
   "dependencies": {
     "@ant-design/icons": "^6.1.0",

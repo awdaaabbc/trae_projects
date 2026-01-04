@@ -1,0 +1,18 @@
+{
+  "id": "111_20260104_142759543",
+  "caseId": "68adcaca-33f8-4dbf-9def-26512034bb9a",
+  "status": "failed",
+  "progress": 100,
+  "createdAt": 1767508079543,
+  "updatedAt": 1767508079944,
+  "fileName": "111_20251231_143027_68adcaca.json",
+  "targetAgentId": "agent-test-002",
+  "logs": [
+    "2026-01-04T06:27:59.543Z queued",
+    "2026-01-04T06:27:59.545Z started",
+    "2026-01-04T06:27:59.944Z finished: failed"
+  ],
+  "agentId": "agent-test-002",
+  "agentName": "Device B",
+  "errorMessage": "Unable to connect to iOS device pending-connection: AssertionError [ERR_ASSERTION]: Failed to get device pixel ratio from WebDriverAgent API"
+}

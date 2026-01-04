@@ -1,0 +1,16 @@
+{
+  "id": "乐读测试11_20260104_104127456",
+  "caseId": "d4748684-c864-42e0-ac49-96f9ec77daa0",
+  "status": "failed",
+  "progress": 100,
+  "createdAt": 1767494487457,
+  "updatedAt": 1767494599063,
+  "fileName": "乐读测试11_20251230_114201_d4748684.json",
+  "logs": [
+    "2026-01-04T02:41:27.457Z queued",
+    "2026-01-04T02:41:27.458Z started",
+    "2026-01-04T02:43:19.051Z cancel requested",
+    "2026-01-04T02:43:19.063Z finished: failed"
+  ],
+  "errorMessage": "Execution cancelled"
+}

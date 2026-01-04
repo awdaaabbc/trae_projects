@@ -1,0 +1,18 @@
+{
+  "id": "测试搜索iphone_20260104_142043826",
+  "caseId": "e20cfea4-d3e7-4d9e-87cb-45994f1b9b00",
+  "status": "failed",
+  "progress": 100,
+  "createdAt": 1767507643826,
+  "updatedAt": 1767507650300,
+  "fileName": "测试搜索iphone_20251231_144747_e20cfea4.json",
+  "logs": [
+    "2026-01-04T06:20:43.826Z queued",
+    "2026-01-04T06:20:43.827Z started",
+    "2026-01-04T06:20:50.290Z cancel requested",
+    "2026-01-04T06:20:50.300Z finished: failed"
+  ],
+  "agentId": "agent-ol51odc",
+  "agentName": "Local Device",
+  "errorMessage": "Execution cancelled"
+}

@@ -1,0 +1,7 @@
+node_modules
+dist
+midscene_run
+.env
+.git
+.DS_Store
+*.log

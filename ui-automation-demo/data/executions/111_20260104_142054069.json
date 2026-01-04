@@ -1,0 +1,17 @@
+{
+  "id": "111_20260104_142054069",
+  "caseId": "68adcaca-33f8-4dbf-9def-26512034bb9a",
+  "status": "success",
+  "progress": 100,
+  "createdAt": 1767507654069,
+  "updatedAt": 1767507659965,
+  "fileName": "111_20251231_143027_68adcaca.json",
+  "logs": [
+    "2026-01-04T06:20:54.069Z queued",
+    "2026-01-04T06:20:54.070Z started",
+    "2026-01-04T06:20:59.965Z finished: success"
+  ],
+  "agentId": "agent-ol51odc",
+  "agentName": "Local Device",
+  "reportPath": "111_20260104_142054069.html"
+}

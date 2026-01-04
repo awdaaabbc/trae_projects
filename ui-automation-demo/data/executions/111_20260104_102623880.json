@@ -1,0 +1,15 @@
+{
+  "id": "111_20260104_102623880",
+  "caseId": "68adcaca-33f8-4dbf-9def-26512034bb9a",
+  "status": "success",
+  "progress": 100,
+  "createdAt": 1767493583880,
+  "updatedAt": 1767493607336,
+  "fileName": "111_20251231_143027_68adcaca.json",
+  "logs": [
+    "2026-01-04T02:26:23.880Z queued",
+    "2026-01-04T02:26:23.881Z started",
+    "2026-01-04T02:26:47.336Z finished: success"
+  ],
+  "reportPath": "111_20260104_102623880.html"
+}

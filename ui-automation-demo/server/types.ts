@@ -17,6 +17,7 @@ export interface Execution {
   id: string;
   caseId: string;
   batchId?: string;
+  targetAgentId?: string;
   status: 'queued' | 'running' | 'success' | 'failed';
   progress: number;
   createdAt: number;
@@ -25,4 +26,6 @@ export interface Execution {
   errorMessage?: string;
   fileName?: string;
   logs?: string[];
+  agentId?: string;
+  agentName?: string;
 }

@@ -1,0 +1,16 @@
+{
+  "id": "111_20260104_111020820",
+  "caseId": "68adcaca-33f8-4dbf-9def-26512034bb9a",
+  "status": "success",
+  "progress": 100,
+  "createdAt": 1767496220820,
+  "updatedAt": 1767496237378,
+  "fileName": "111_20251231_143027_68adcaca.json",
+  "logs": [
+    "2026-01-04T03:10:20.821Z queued",
+    "2026-01-04T03:10:20.821Z started",
+    "2026-01-04T03:10:23.414Z force stopped: process not found, resetting status",
+    "2026-01-04T03:10:37.378Z finished: success"
+  ],
+  "reportPath": "111_20260104_111020820.html"
+}

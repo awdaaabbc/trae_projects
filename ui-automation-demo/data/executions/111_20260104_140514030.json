@@ -1,0 +1,16 @@
+{
+  "id": "111_20260104_140514030",
+  "caseId": "68adcaca-33f8-4dbf-9def-26512034bb9a",
+  "status": "success",
+  "progress": 100,
+  "createdAt": 1767506714030,
+  "updatedAt": 1767506721087,
+  "fileName": "111_20251231_143027_68adcaca.json",
+  "targetAgentId": "agent-ol51odc",
+  "logs": [
+    "2026-01-04T06:05:14.031Z queued",
+    "2026-01-04T06:05:14.031Z started",
+    "2026-01-04T06:05:21.087Z finished: success"
+  ],
+  "reportPath": "111_20260104_140514030.html"
+}

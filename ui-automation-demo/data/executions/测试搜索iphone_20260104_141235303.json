@@ -1,0 +1,14 @@
+{
+  "id": "测试搜索iphone_20260104_141235303",
+  "caseId": "e20cfea4-d3e7-4d9e-87cb-45994f1b9b00",
+  "status": "failed",
+  "progress": 100,
+  "createdAt": 1767507155303,
+  "updatedAt": 1767507230099,
+  "fileName": "测试搜索iphone_20251231_144747_e20cfea4.json",
+  "logs": [
+    "2026-01-04T06:12:35.305Z queued",
+    "2026-01-04T06:12:35.306Z started"
+  ],
+  "errorMessage": "服务异常终止，状态已重置"
+}

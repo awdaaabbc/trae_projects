@@ -1,0 +1,20 @@
+{
+  "id": "ai-demo-github",
+  "name": "GitHub 搜索 (AI 模型能力演示)",
+  "description": "使用自然语言指令搜索 GitHub，演示 Midscene 的语义理解能力（需要配置模型）",
+  "steps": [
+    {
+      "id": "g1",
+      "action": "打开 https://github.com/search?q=Midscene&type=repositories"
+    },
+    {
+      "id": "g2",
+      "action": "点击第一个搜索结果的标题链接"
+    },
+    {
+      "id": "g3",
+      "action": "检查页面是否包含 \"Readme\" 文本"
+    }
+  ],
+  "status": "idle"
+}

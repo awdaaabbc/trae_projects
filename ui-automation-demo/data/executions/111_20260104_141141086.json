@@ -1,0 +1,16 @@
+{
+  "id": "111_20260104_141141086",
+  "caseId": "68adcaca-33f8-4dbf-9def-26512034bb9a",
+  "status": "failed",
+  "progress": 100,
+  "createdAt": 1767507101086,
+  "updatedAt": 1767507118253,
+  "fileName": "111_20251231_143027_68adcaca.json",
+  "targetAgentId": "agent-ol51odc",
+  "logs": [
+    "2026-01-04T06:11:41.087Z queued",
+    "2026-01-04T06:11:41.087Z started",
+    "2026-01-04T06:11:58.253Z finished: failed"
+  ],
+  "errorMessage": "Failed to tap at coordinates: WebDriverRequestError: WebDriver request failed: HTTP 404\nError: Failed to tap at coordinates: WebDriverRequestError: WebDriver request failed: HTTP 404\n    at IOSWebDriverClient.tap (/Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/.pnpm/@midscene+ios@1.0.4_@types+node@24.10.4_ws@8.18.3/node_modules/@midscene/ios/dist/es/index.mjs:244:23)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async IOSDevice.tap (/Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/.pnpm/@midscene+ios@1.0.4_@types+node@24.10.4_ws@8.18.3/node_modules/@midscene/ios/dist/es/index.mjs:595:9)\n    at async IOSDevice.mouseClick (/Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/.pnpm/@midscene+ios@1.0.4_@types+node@24.10.4_ws@8.18.3/node_modules/@midscene/ios/dist/es/index.mjs:599:9)\n    at async IOSDevice.<anonymous> (/Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/.pnpm/@midscene+ios@1.0.4_@types+node@24.10.4_ws@8.18.3/node_modules/@midscene/ios/dist/es/index.mjs:400:17)\n    at async Object.executor (/Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/.pnpm/@midscene+core@1.0.4_ws@8.18.3/node_modules/@midscene/core/src/agent/task-builder.ts:314:30)\n    at async TaskRunner.flush (/Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/.pnpm/@midscene+core@1.0.4_ws@8.18.3/node_modules/@midscene/core/src/task-runner.ts:304:25)\n    at async TaskExecutor.action (/Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/.pnpm/@midscene+core@1.0.4_ws@8.18.3/node_modules/@midscene/core/src/agent/tasks.ts:363:9)\n    at async IOSAgent.aiAct (/Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/.pnpm/@midscene+core@1.0.4_ws@8.18.3/node_modules/@midscene/core/src/agent/agent.ts:893:24)\n    at async <anonymous> (/Users/ledu/Documents/trae_projects/ui-automation-demo/server/runner.ios.ts:150:21)"
+}

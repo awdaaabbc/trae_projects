@@ -70,6 +70,7 @@ type Execution = {
   errorMessage?: string
   fileName?: string
   logs?: string[]
+  agentName?: string
 }
 
 async function api<T>(url: string, init?: RequestInit) {
@@ -141,6 +142,10 @@ function App() {
     return creating.name.trim() && creating.stepsText.trim()
   }, [creating.name, creating.stepsText])
   
+  const [runModalOpen, setRunModalOpen] = useState(false)
+  const [targetAgentId, setTargetAgentId] = useState<string | undefined>(undefined)
+  const [agents, setAgents] = useState<{ id: string; deviceName: string; platform: string; status: string }[]>([])
+  
   // UI state
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isBatchModalOpen, setIsBatchModalOpen] = useState(false)
@@ -157,6 +162,15 @@ function App() {
   const [messageApi, contextHolder] = message.useMessage()
   const wsRef = useRef<WebSocket | null>(null)
 
+  async function fetchAgents() {
+    try {
+      const res = await api<{ id: string; deviceName: string; platform: string; status: string }[]>('/api/agents')
+      setAgents(res.data)
+    } catch (e) {
+      console.error('Failed to fetch agents', e)
+    }
+  }
+
   // Initial Data Load & WebSocket
   async function refreshData() {
     try {
@@ -166,6 +180,7 @@ function App() {
       ])
       setCases(cs.data)
       setExecutions(ex.data)
+      fetchAgents() // Refresh agents as well
     } catch (e) {
       console.error('Failed to refresh data', e)
     }
@@ -332,14 +347,24 @@ function App() {
     }
   }
 
-  async function executeCase(id: string) {
+  async function executeCase(id: string, agentId?: string) {
     try {
-      await api<Execution>(`/api/execute/${id}`, { method: 'POST' })
+      await api<Execution>(`/api/execute/${id}`, { 
+        method: 'POST',
+        body: JSON.stringify({ targetAgentId: agentId })
+      })
       messageApi.info('任务已开始执行')
       refreshData()
+      setRunModalOpen(false)
     } catch (e) {
       messageApi.error('执行失败: ' + (e instanceof Error ? e.message : '未知错误'))
     }
+  }
+
+  const handleRunClick = () => {
+    fetchAgents()
+    setTargetAgentId(undefined)
+    setRunModalOpen(true)
   }
 
   async function batchExecute(caseIds: string[]) {
@@ -548,12 +573,50 @@ function App() {
                       停止执行
                     </Button>
                   ) : (
-                    <Button type="primary" icon={<PlayCircleOutlined />} onClick={() => executeCase(selected.id)}>
+                    <Button type="primary" icon={<PlayCircleOutlined />} onClick={handleRunClick}>
                       执行测试
                     </Button>
                   )}
                 </div>
               </div>
+
+              <Modal
+                title="执行配置"
+                open={runModalOpen}
+                onCancel={() => setRunModalOpen(false)}
+                onOk={() => selected && executeCase(selected.id, targetAgentId)}
+                okText="开始执行"
+                cancelText="取消"
+              >
+                <div style={{ marginBottom: 16 }}>
+                  <Text>选择执行设备：</Text>
+                  <Select
+                    style={{ width: '100%', marginTop: 8 }}
+                    placeholder="选择你的设备）"
+                    allowClear
+                    value={targetAgentId}
+                    onChange={setTargetAgentId}
+                  >
+                    {agents
+                      .filter(a => !selected || a.platform === selected.platform)
+                      .map(agent => (
+                        <Select.Option key={agent.id} value={agent.id} disabled={agent.status !== 'idle'}>
+                          <Space>
+                            {agent.platform === 'android' ? <AndroidOutlined /> : <AppleOutlined />}
+                            {agent.deviceName}
+                            <Text type="secondary" style={{ fontSize: 12 }}>({agent.id})</Text>
+                            {agent.status !== 'idle' && <Tag color="warning">忙碌</Tag>}
+                          </Space>
+                        </Select.Option>
+                    ))}
+                  </Select>
+                  <div style={{ marginTop: 8 }}>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      如果不选择特定设备，系统将自动分配给空闲的 {selected?.platform === 'android' ? 'Android' : 'iOS'} 设备。
+                    </Text>
+                  </div>
+                </div>
+              </Modal>
 
               <Tabs
                 items={[
@@ -608,7 +671,16 @@ function App() {
                               }
                               description={
                                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                  <Text type="secondary">{formatTime(item.updatedAt)}</Text>
+                                  <Space>
+                                    <Text type="secondary" style={{ fontSize: 12 }}>
+                                      {formatTime(item.createdAt)}
+                                    </Text>
+                                    {item.agentName && (
+                                      <Tag icon={<GlobalOutlined />} color="blue">
+                                        {item.agentName}
+                                      </Tag>
+                                    )}
+                                  </Space>
                                   {item.status === 'running' && <Progress percent={item.progress} size="small" style={{ width: 140 }} />}
                                   {item.errorMessage && <Text type="danger">{item.errorMessage}</Text>}
                                 </div>

@@ -1,0 +1,15 @@
+{
+  "id": "测试搜索iphone_20260104_140711531",
+  "caseId": "e20cfea4-d3e7-4d9e-87cb-45994f1b9b00",
+  "status": "success",
+  "progress": 100,
+  "createdAt": 1767506831531,
+  "updatedAt": 1767506890501,
+  "fileName": "测试搜索iphone_20251231_144747_e20cfea4.json",
+  "logs": [
+    "2026-01-04T06:07:11.532Z queued",
+    "2026-01-04T06:07:11.532Z started",
+    "2026-01-04T06:08:10.501Z finished: success"
+  ],
+  "reportPath": "测试搜索iphone_20260104_140711531.html"
+}

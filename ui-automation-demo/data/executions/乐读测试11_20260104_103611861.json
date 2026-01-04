@@ -1,0 +1,15 @@
+{
+  "id": "乐读测试11_20260104_103611861",
+  "caseId": "d4748684-c864-42e0-ac49-96f9ec77daa0",
+  "status": "failed",
+  "progress": 100,
+  "createdAt": 1767494171862,
+  "updatedAt": 1767494190864,
+  "fileName": "乐读测试11_20251230_114201_d4748684.json",
+  "logs": [
+    "2026-01-04T02:36:11.862Z queued",
+    "2026-01-04T02:36:11.863Z started",
+    "2026-01-04T02:36:30.864Z finished: failed"
+  ],
+  "errorMessage": "Failed to continue: 缺少乐读小班APP的具体包名信息，无法准确执行Launch操作\n启动带有乐读小班图标的APP\nError: Failed to continue: 缺少乐读小班APP的具体包名信息，无法准确执行Launch操作\n启动带有乐读小班图标的APP\n    at assert (file:///Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/.pnpm/@midscene+shared@1.0.4/node_modules/@midscene/shared/dist/es/utils.mjs:35:27)\n    at Object.executor (file:///Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/.pnpm/@midscene+core@1.0.4_ws@8.18.3/node_modules/@midscene/core/src/agent/tasks.ts:317:13)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at TaskRunner.flush (file:///Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/.pnpm/@midscene+core@1.0.4_ws@8.18.3/node_modules/@midscene/core/src/task-runner.ts:297:25)\n    at TaskExecutor.action (file:///Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/.pnpm/@midscene+core@1.0.4_ws@8.18.3/node_modules/@midscene/core/src/agent/tasks.ts:239:22)\n    at AndroidAgent.aiAct (file:///Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/.pnpm/@midscene+core@1.0.4_ws@8.18.3/node_modules/@midscene/core/src/agent/agent.ts:893:24)\n    at file:///Users/ledu/Documents/trae_projects/ui-automation-demo/server/runner.android.ts:1:3703\n    at runTestCase (file:///Users/ledu/Documents/trae_projects/ui-automation-demo/server/runner.android.ts:1:3805)\n    at WebSocket.<anonymous> (file:///Users/ledu/Documents/trae_projects/ui-automation-demo/agent/index.ts:1:1336)"
+}

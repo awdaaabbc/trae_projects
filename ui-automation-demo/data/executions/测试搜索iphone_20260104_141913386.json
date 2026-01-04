@@ -1,0 +1,17 @@
+{
+  "id": "测试搜索iphone_20260104_141913386",
+  "caseId": "e20cfea4-d3e7-4d9e-87cb-45994f1b9b00",
+  "status": "success",
+  "progress": 100,
+  "createdAt": 1767507553386,
+  "updatedAt": 1767507597983,
+  "fileName": "测试搜索iphone_20251231_144747_e20cfea4.json",
+  "logs": [
+    "2026-01-04T06:19:13.388Z queued",
+    "2026-01-04T06:19:13.389Z started",
+    "2026-01-04T06:19:57.983Z finished: success"
+  ],
+  "agentId": "agent-ol51odc",
+  "agentName": "Local Device",
+  "reportPath": "测试搜索iphone_20260104_141913386.html"
+}

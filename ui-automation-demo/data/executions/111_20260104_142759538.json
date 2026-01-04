@@ -1,0 +1,18 @@
+{
+  "id": "111_20260104_142759538",
+  "caseId": "68adcaca-33f8-4dbf-9def-26512034bb9a",
+  "status": "success",
+  "progress": 100,
+  "createdAt": 1767508079538,
+  "updatedAt": 1767508086015,
+  "fileName": "111_20251231_143027_68adcaca.json",
+  "targetAgentId": "agent-test-001",
+  "logs": [
+    "2026-01-04T06:27:59.539Z queued",
+    "2026-01-04T06:27:59.540Z started",
+    "2026-01-04T06:28:06.015Z finished: success"
+  ],
+  "agentId": "agent-test-001",
+  "agentName": "Device A",
+  "reportPath": "111_20260104_142759538.html"
+}

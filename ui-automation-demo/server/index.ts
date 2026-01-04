@@ -5,6 +5,7 @@ import { WebSocketServer, WebSocket } from 'ws'
 import path from 'node:path'
 import http from 'node:http'
 import crypto from 'node:crypto'
+import fs from 'node:fs'
 import { Storage } from './storage.js'
 import type { Execution, TestCase } from './types.js'
 import { runTestCase as runWebTestCase, cancelExecution as cancelWebExecution } from './runner.js'
@@ -16,6 +17,7 @@ import {
   runTestCase as runIosTestCase,
   cancelExecution as cancelIosExecution,
 } from './runner.ios.js'
+import type { AgentToServerMessage, ServerToAgentMessage, AgentInfo } from './protocol.js'
 
 const app = exp()
 app.use(exp.json())
@@ -25,6 +27,12 @@ const reportDir = process.env.UI_AUTOMATION_REPORT_DIR
   ? path.resolve(process.env.UI_AUTOMATION_REPORT_DIR)
   : path.resolve(process.cwd(), 'midscene_run', 'report')
 app.use('/reports', exp.static(reportDir))
+
+// Serve Frontend Static Files (Production)
+const clientDist = path.join(process.cwd(), 'dist', 'client')
+if (fs.existsSync(clientDist)) {
+  app.use(exp.static(clientDist))
+}
 
 app.use((req, res, next) => {
   const requestId = crypto.randomUUID()
@@ -121,14 +129,15 @@ async function runJob(job: QueueJob) {
 
   try {
     const tc = Storage.getCase(caseId)
-    if (!tc) {
+    const execution = Storage.getExecution(exeId)
+    if (!tc || !execution) {
       Storage.updateExecution(exeId, {
         status: 'failed',
         progress: 100,
-        errorMessage: '测试用例不存在或已删除',
+        errorMessage: '测试用例或执行记录不存在',
       })
       broadcast({ type: 'execution', payload: Storage.getExecution(exeId) })
-      appendExecutionLog(exeId, 'failed: testcase missing')
+      appendExecutionLog(exeId, 'failed: testcase or execution missing')
       return
     }
 
@@ -138,14 +147,17 @@ async function runJob(job: QueueJob) {
 
     let runner
     if (tc.platform === 'android') {
-      runner = runAndroidTestCase
+      // runner = runAndroidTestCase
+      // Use remote runner for Android if enabled, or check if we have agents
+      runner = (t: TestCase, e: string, cb: any) => runRemoteTestCase(t, e, cb, execution.targetAgentId)
     } else if (tc.platform === 'ios') {
-      runner = runIosTestCase
+      // runner = runIosTestCase
+      runner = (t: TestCase, e: string, cb: any) => runRemoteTestCase(t, e, cb, execution.targetAgentId)
     } else {
       runner = runWebTestCase
     }
 
-    const result = await runner(tc, exeId, (patch) => {
+    const result = await runner(tc, exeId, (patch: Partial<Execution>) => {
       const normalizedPatch =
         patch.reportPath ? { ...patch, reportPath: normalizeReportPath(patch.reportPath) } : patch
       Storage.updateExecution(exeId, normalizedPatch)
@@ -190,6 +202,12 @@ async function runJob(job: QueueJob) {
 // Basic health endpoint
 app.get('/api/health', (_req: Request, res: Response) => {
   res.json({ ok: true })
+})
+
+// Agents API
+app.get('/api/agents', (_req: Request, res: Response) => {
+  const list = Array.from(agents.values())
+  res.json({ data: list })
 })
 
 // Test Case APIs
@@ -265,11 +283,12 @@ app.get('/api/executions', (_req: Request, res: Response) => {
 
 app.post('/api/execute/:id', async (req: Request, res: Response) => {
   const id = req.params.id
+  const { targetAgentId } = req.body as { targetAgentId?: string }
   const tc = Storage.getCase(id)
   if (!tc) return res.status(404).json({ error: '未找到测试用例' })
 
   const fileName = Storage.getCaseFilename(id)
-  console.log(`Executing case: ${tc.name}, File: ${fileName}`)
+  console.log(`Executing case: ${tc.name}, File: ${fileName}, Agent: ${targetAgentId || 'Any'}`)
 
   Storage.updateCase(id, { status: 'running' })
   const exeId = Storage.generateExecutionId(tc.name)
@@ -282,6 +301,7 @@ app.post('/api/execute/:id', async (req: Request, res: Response) => {
     createdAt,
     updatedAt: createdAt,
     fileName,
+    targetAgentId,
   }
   Storage.saveExecution(exe)
   broadcast({ type: 'execution', payload: Storage.getExecution(exeId) })
@@ -360,12 +380,12 @@ app.post('/api/stop-execution/:id', (req: Request, res: Response) => {
   const tc = exe ? Storage.getCase(exe.caseId) : undefined
   const success =
     tc?.platform === 'android'
-      ? cancelAndroidExecution(id)
+      ? cancelRemoteExecution(id) || cancelAndroidExecution(id)
       : tc?.platform === 'ios'
-        ? cancelIosExecution(id)
+        ? cancelRemoteExecution(id) || cancelIosExecution(id)
         : tc?.platform === 'web'
           ? cancelWebExecution(id)
-          : cancelWebExecution(id) || cancelAndroidExecution(id) || cancelIosExecution(id)
+          : cancelWebExecution(id) || cancelRemoteExecution(id)
   if (success) {
     appendExecutionLog(id, 'cancel requested')
     res.json({ ok: true })
@@ -487,10 +507,174 @@ type WSMessage =
   | { type: 'error'; payload: { message: string } }
 
 const clients = new Set<WebSocket>()
+const agents = new Map<WebSocket, AgentInfo>()
+// Map to track which execution is running on which agent
+const executionAgentMap = new Map<string, WebSocket>()
+// Map to resolve the promise when remote execution finishes
+const remoteExecutionResolvers = new Map<string, (result: any) => void>()
+
 wss.on('connection', (ws: WebSocket) => {
   clients.add(ws)
-  ws.on('close', () => clients.delete(ws))
+  
+  ws.on('message', (data) => {
+    try {
+      const msg = JSON.parse(data.toString()) as AgentToServerMessage
+      if (msg.type === 'REGISTER') {
+        const newAgent = msg.payload
+        
+        // 1. Enforce ID uniqueness: Kick out any existing agent with the same ID
+        // Note: We iterate to find all duplicates (though ideally there's only one)
+        for (const [existingWs, info] of agents.entries()) {
+          if (info.id === newAgent.id) {
+            console.log(`[Register] Duplicate Agent ID ${newAgent.id} detected. Closing old connection.`)
+            try {
+              existingWs.close(1000, 'Duplicate Agent ID')
+            } catch (e) {
+              // ignore if already closed
+            }
+            agents.delete(existingWs)
+            clients.delete(existingWs)
+          }
+        }
+
+        // 2. Enforce Name uniqueness: Append suffix if name exists
+        let nameCandidate = newAgent.deviceName
+        let suffix = 1
+        while (true) {
+            const nameExists = Array.from(agents.values()).some(a => a.deviceName === nameCandidate && a.id !== newAgent.id)
+            if (!nameExists) break
+            nameCandidate = `${newAgent.deviceName} (${suffix++})`
+        }
+        if (nameCandidate !== newAgent.deviceName) {
+             console.log(`[Register] Device name collision. Renaming "${newAgent.deviceName}" to "${nameCandidate}"`)
+             newAgent.deviceName = nameCandidate
+        }
+
+        agents.set(ws, newAgent)
+        console.log(`Agent registered: ${newAgent.deviceName} (${newAgent.platform})`)
+        // Remove from broadcast clients if we want to isolate traffic, 
+        // but keeping it might be useful for debugging if agents also want to receive updates?
+        // For now, let's keep it in clients too so it receives broadcast if needed, 
+        // but typically agents don't need UI updates.
+        clients.delete(ws) 
+      } else if (msg.type === 'UPDATE_EXECUTION') {
+        const { executionId, patch } = msg.payload
+        const normalizedPatch =
+          patch.reportPath ? { ...patch, reportPath: normalizeReportPath(patch.reportPath) } : patch
+        Storage.updateExecution(executionId, normalizedPatch)
+        broadcast({ type: 'execution', payload: Storage.getExecution(executionId) })
+      } else if (msg.type === 'TASK_COMPLETED') {
+        const { executionId, result, reportContent } = msg.payload
+        
+        // Save report content if provided
+        if (result.reportPath && reportContent) {
+           const reportRoot = process.env.UI_AUTOMATION_REPORT_DIR
+             ? path.resolve(process.env.UI_AUTOMATION_REPORT_DIR)
+             : path.resolve(process.cwd(), 'midscene_run', 'report')
+           if (!fs.existsSync(reportRoot)) {
+             fs.mkdirSync(reportRoot, { recursive: true })
+           }
+           const finalPath = path.join(reportRoot, path.basename(result.reportPath))
+           fs.writeFileSync(finalPath, reportContent, 'utf-8')
+        }
+
+        const resolver = remoteExecutionResolvers.get(executionId)
+        if (resolver) {
+          resolver(result)
+          remoteExecutionResolvers.delete(executionId)
+        }
+        executionAgentMap.delete(executionId)
+      }
+    } catch (err) {
+      // Ignore non-JSON messages (maybe ping/pong)
+    }
+  })
+
+  ws.on('close', () => {
+    clients.delete(ws)
+    if (agents.has(ws)) {
+      console.log(`Agent disconnected: ${agents.get(ws)?.deviceName}`)
+      agents.delete(ws)
+    }
+  })
 })
+
+async function runRemoteTestCase(
+  testCase: TestCase, 
+  executionId: string, 
+  _updateCallback: (patch: Partial<Execution>) => void,
+  targetAgentId?: string
+): Promise<{ status: 'success' | 'failed'; reportPath?: string; errorMessage?: string }> {
+  // Find suitable agent
+  let targetWs: WebSocket | undefined
+
+  if (targetAgentId) {
+    for (const [ws, info] of agents.entries()) {
+      if (info.id === targetAgentId && info.platform === testCase.platform) {
+        targetWs = ws
+        break
+      }
+    }
+    if (!targetWs) {
+      throw new Error(`Target agent not found or not connected: ${targetAgentId}`)
+    }
+  } else {
+    for (const [ws, info] of agents.entries()) {
+      if (info.platform === testCase.platform && info.status === 'idle') {
+        targetWs = ws
+        break
+      }
+    }
+
+    // If no idle agent, pick any matching agent (queueing is handled by agent effectively if it can run parallel, 
+    // but for now let's just pick the first one)
+    if (!targetWs) {
+      for (const [ws, info] of agents.entries()) {
+        if (info.platform === testCase.platform) {
+          targetWs = ws
+          break
+        }
+      }
+    }
+  }
+
+  if (!targetWs) {
+    throw new Error(`No available agent for platform: ${testCase.platform}`)
+  }
+
+  // Record the actual agent being used
+  const agentInfo = agents.get(targetWs!)
+  if (agentInfo) {
+    _updateCallback({ 
+      agentId: agentInfo.id,
+      agentName: agentInfo.deviceName 
+    })
+  }
+
+  return new Promise((resolve) => {
+    remoteExecutionResolvers.set(executionId, resolve)
+    executionAgentMap.set(executionId, targetWs!)
+
+    const msg: ServerToAgentMessage = {
+      type: 'EXECUTE_TASK',
+      payload: { executionId, testCase }
+    }
+    targetWs!.send(JSON.stringify(msg))
+  })
+}
+
+function cancelRemoteExecution(executionId: string) {
+  const ws = executionAgentMap.get(executionId)
+  if (ws) {
+    const msg: ServerToAgentMessage = {
+      type: 'CANCEL_TASK',
+      payload: { executionId }
+    }
+    ws.send(JSON.stringify(msg))
+    return true
+  }
+  return false
+}
 
 function broadcast(msg: WSMessage) {
   const data = JSON.stringify(msg)
@@ -515,6 +699,16 @@ server.listen(PORT, () => {
   const actualPort = typeof addr === 'object' && addr ? addr.port : PORT
   console.log(`Server listening on http://localhost:${actualPort}`)
 })
+
+// SPA Fallback (Must be after API routes)
+if (fs.existsSync(clientDist)) {
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api/') || req.path.startsWith('/reports/')) {
+      return next()
+    }
+    res.sendFile(path.join(clientDist, 'index.html'))
+  })
+}
 
 process.on('unhandledRejection', (reason) => {
   console.error('UnhandledRejection:', reason)

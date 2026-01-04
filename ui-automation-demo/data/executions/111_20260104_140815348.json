@@ -1,0 +1,16 @@
+{
+  "id": "111_20260104_140815348",
+  "caseId": "68adcaca-33f8-4dbf-9def-26512034bb9a",
+  "status": "failed",
+  "progress": 100,
+  "createdAt": 1767506895348,
+  "updatedAt": 1767506912318,
+  "fileName": "111_20251231_143027_68adcaca.json",
+  "targetAgentId": "agent-ol51odc",
+  "logs": [
+    "2026-01-04T06:08:15.349Z queued",
+    "2026-01-04T06:08:15.349Z started",
+    "2026-01-04T06:08:32.318Z finished: failed"
+  ],
+  "errorMessage": "Failed to take screenshot: WebDriverRequestError: WebDriver request failed: HTTP 404\nError: Failed to take screenshot: WebDriverRequestError: WebDriver request failed: HTTP 404\n    at IOSDevice.screenshotBase64 (/Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/.pnpm/@midscene+ios@1.0.4_@types+node@24.10.4_ws@8.18.3/node_modules/@midscene/ios/dist/es/index.mjs:580:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async commonContextParser (/Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/.pnpm/@midscene+core@1.0.4_ws@8.18.3/node_modules/@midscene/core/src/agent/utils.ts:41:28)\n    at async IOSAgent.getUIContext (/Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/.pnpm/@midscene+core@1.0.4_ws@8.18.3/node_modules/@midscene/core/src/agent/agent.ts:426:17)\n    at async TaskRunner.getUiContext (/Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/.pnpm/@midscene+core@1.0.4_ws@8.18.3/node_modules/@midscene/core/src/task-runner.ts:93:25)\n    at async TaskRunner.flush (/Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/.pnpm/@midscene+core@1.0.4_ws@8.18.3/node_modules/@midscene/core/src/task-runner.ts:276:23)\n    at async TaskExecutor.action (/Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/.pnpm/@midscene+core@1.0.4_ws@8.18.3/node_modules/@midscene/core/src/agent/tasks.ts:239:22)\n    at async IOSAgent.aiAct (/Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/.pnpm/@midscene+core@1.0.4_ws@8.18.3/node_modules/@midscene/core/src/agent/agent.ts:893:24)\n    at async <anonymous> (/Users/ledu/Documents/trae_projects/ui-automation-demo/server/runner.ios.ts:150:21)\n    at async runTestCase (/Users/ledu/Documents/trae_projects/ui-automation-demo/server/runner.ios.ts:154:7)"
+}

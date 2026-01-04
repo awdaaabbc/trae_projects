@@ -1,0 +1,15 @@
+{
+  "id": "测试大模型的规划能力_20260104_101943697",
+  "caseId": "1ca430b6-2967-4e93-9f9e-487f114d6ef9",
+  "status": "failed",
+  "progress": 100,
+  "createdAt": 1767493183697,
+  "updatedAt": 1767493183703,
+  "fileName": "测试大模型的规划能力_20251231_155227_1ca430b6.json",
+  "logs": [
+    "2026-01-04T02:19:43.699Z queued",
+    "2026-01-04T02:19:43.700Z started",
+    "2026-01-04T02:19:43.703Z failed: No available agent for platform: android"
+  ],
+  "errorMessage": "No available agent for platform: android"
+}

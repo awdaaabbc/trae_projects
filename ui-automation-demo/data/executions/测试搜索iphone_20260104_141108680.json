@@ -1,0 +1,15 @@
+{
+  "id": "测试搜索iphone_20260104_141108680",
+  "caseId": "e20cfea4-d3e7-4d9e-87cb-45994f1b9b00",
+  "status": "failed",
+  "progress": 100,
+  "createdAt": 1767507068680,
+  "updatedAt": 1767507068684,
+  "fileName": "测试搜索iphone_20251231_144747_e20cfea4.json",
+  "logs": [
+    "2026-01-04T06:11:08.680Z queued",
+    "2026-01-04T06:11:08.680Z started",
+    "2026-01-04T06:11:08.684Z finished: failed"
+  ],
+  "errorMessage": "Unable to connect to iOS device pending-connection: Error: Failed to start WebDriverAgent: Error: WebDriverAgent is not running on localhost:8100. Please start WebDriverAgent manually:\n\n🔧 Setup Instructions:\n1. Install WebDriverAgent: npm install appium-webdriveragent\n2. Build and run WebDriverAgent:\n   - For simulators: Use Xcode to run WebDriverAgentRunner on your target simulator\n   - For real devices: Build WebDriverAgentRunner and install on your device\n3. Ensure WebDriverAgent is listening on localhost:8100\n\n💡 Alternative: You can also specify a different host/port where WebDriverAgent is running."
+}

@@ -1,0 +1,15 @@
+{
+  "id": "111_20260104_102255157",
+  "caseId": "68adcaca-33f8-4dbf-9def-26512034bb9a",
+  "status": "failed",
+  "progress": 100,
+  "createdAt": 1767493375157,
+  "updatedAt": 1767493385505,
+  "fileName": "111_20251231_143027_68adcaca.json",
+  "logs": [
+    "2026-01-04T02:22:55.158Z queued",
+    "2026-01-04T02:22:55.159Z started",
+    "2026-01-04T02:23:05.505Z finished: failed"
+  ],
+  "errorMessage": "failed to call AI model service (20251226164616-zvvk9): 404 The model or endpoint 20251226164616-zvvk9 does not exist or you do not have access to it. Request id: 02176749337984366d4fff57f472cc97f9dc7178d7aa52677c82e\nTrouble shooting: https://midscenejs.com/model-provider.html\nError: failed to call AI model service (20251226164616-zvvk9): 404 The model or endpoint 20251226164616-zvvk9 does not exist or you do not have access to it. Request id: 02176749337984366d4fff57f472cc97f9dc7178d7aa52677c82e\nTrouble shooting: https://midscenejs.com/model-provider.html\n    at callAI (/Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/.pnpm/@midscene+core@1.0.4_ws@8.18.3/node_modules/@midscene/core/dist/es/ai-model/service-caller/index.mjs:221:26)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async callAIWithObjectResponse (/Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/.pnpm/@midscene+core@1.0.4_ws@8.18.3/node_modules/@midscene/core/dist/es/ai-model/service-caller/index.mjs:228:22)\n    at async AiLocateElement (/Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/.pnpm/@midscene+core@1.0.4_ws@8.18.3/node_modules/@midscene/core/src/ai-model/inspect.ts:202:15)\n    at async Service.locate (/Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/.pnpm/@midscene+core@1.0.4_ws@8.18.3/node_modules/@midscene/core/src/service/index.ts:132:55)\n    at async Object.executor (/Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/.pnpm/@midscene+core@1.0.4_ws@8.18.3/node_modules/@midscene/core/src/agent/task-builder.ts:464:28)\n    at async TaskRunner.flush (/Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/.pnpm/@midscene+core@1.0.4_ws@8.18.3/node_modules/@midscene/core/src/task-runner.ts:297:25)\n    at async TaskExecutor.action (/Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/.pnpm/@midscene+core@1.0.4_ws@8.18.3/node_modules/@midscene/core/src/agent/tasks.ts:363:9)\n    at async IOSAgent.aiAct (/Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/.pnpm/@midscene+core@1.0.4_ws@8.18.3/node_modules/@midscene/core/src/agent/agent.ts:893:24)\n    at async <anonymous> (/Users/ledu/Documents/trae_projects/ui-automation-demo/server/runner.ios.ts:150:21)"
+}

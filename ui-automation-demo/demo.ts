@@ -45,13 +45,10 @@ Promise.resolve(
     
     // 确保在正确的页面
     await agent.aiAct('点击乐读app(图标是乐读小班)，如果当前界面不包含任何app图标，请返回主界面，左右滑动直到出现乐读图标，点击打开');
-    await agent.aiAct('进入课程搜索页，如果出现权限/协议/引导弹窗，全部关闭或同意');
-    await agent.aiAct('点击搜索框，直到出现输入光标');
-    await agent.aiAct('如果搜索框里已有文字，长按搜索框，点击全选，然后删除清空');
-    await agent.aiAct('输入小班化学');
+    await agent.aiAct('如果出现权限/协议/引导弹窗，全部关闭或同意');
+    await agent.aiAct('点击搜索框，直到出现输入光标，如果搜索框里已有文字，长按搜索框，点击全选，然后删除清空，最后输入小班化学');
     await agent.aiAct('长按搜索框直至出现粘贴界面，点击粘贴');
     await agent.aiAct('如果没有出现“粘贴”，再次长按搜索框直到出现“粘贴”，然后点击“粘贴”，如果搜索框已经包含”小班化学“请忽略');
-    // await agent.aiAct('确认搜索框里出现“小班物理”');
     await agent.aiAct('按下回车键');
 
     //  await agent.aiAct('点击乐读app(图标是乐读小班)，如果当前界面不包含任何app图标，请返回主界面，左右滑动直到出现乐读图标，点击打开');

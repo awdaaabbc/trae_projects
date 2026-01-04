@@ -1,0 +1,16 @@
+{
+  "id": "github测试搜索_AI能力展示_11112123_20251230_154345031",
+  "caseId": "ai-demo-github",
+  "batchId": "91267b84-1dca-4230-8bab-4e06a75bc6e0",
+  "status": "failed",
+  "progress": 100,
+  "createdAt": 1767080625031,
+  "updatedAt": 1767080663195,
+  "fileName": "ai-demo-github.json",
+  "logs": [
+    "2025-12-30T07:43:45.031Z queued: batch 91267b84-1dca-4230-8bab-4e06a75bc6e0",
+    "2025-12-30T07:43:45.032Z started",
+    "2025-12-30T07:44:23.195Z finished: failed"
+  ],
+  "errorMessage": "Execution cancelled"
+}

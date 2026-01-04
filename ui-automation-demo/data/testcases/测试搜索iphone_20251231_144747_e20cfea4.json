@@ -1,0 +1,25 @@
+{
+  "id": "e20cfea4-d3e7-4d9e-87cb-45994f1b9b00",
+  "name": "测试搜索iphone",
+  "description": "",
+  "platform": "ios",
+  "steps": [
+    {
+      "id": "u1767163667020-0",
+      "type": "action",
+      "action": "打开浏览器，打开ebay官网"
+    },
+    {
+      "id": "u1767163667020-1",
+      "type": "action",
+      "action": "搜索iphone"
+    },
+    {
+      "id": "u1767163667020-2",
+      "type": "query",
+      "action": "{information:string}返回第一个手机的全部信息"
+    }
+  ],
+  "status": "error",
+  "lastRunAt": 1767173820742
+}

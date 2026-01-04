@@ -1,8 +1,9 @@
 {
   "id": "exe-1766661667125-394",
   "caseId": "ai-demo-github",
-  "status": "queued",
-  "progress": 0,
+  "status": "failed",
+  "progress": 100,
   "createdAt": 1766661667125,
-  "updatedAt": 1766661667125
+  "updatedAt": 1767081226193,
+  "errorMessage": "服务异常终止，状态已重置"
 }

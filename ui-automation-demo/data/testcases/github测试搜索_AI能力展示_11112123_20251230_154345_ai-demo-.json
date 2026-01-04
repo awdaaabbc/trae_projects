@@ -2,6 +2,7 @@
   "id": "ai-demo-github",
   "name": "github测试搜索（AI能力展示）11112123",
   "description": "使用自然语言指令搜索 GitHub，演示 Midscene 的语义理解能力（需要配置模型）",
+  "platform": "web",
   "steps": [
     {
       "id": "u1766734130058-0",
@@ -20,6 +21,5 @@
     }
   ],
   "status": "error",
-  "lastRunAt": 1766739155470,
-  "updatedAt": 1766734169487
+  "lastRunAt": 1767081871791
 }

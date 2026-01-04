@@ -2,6 +2,7 @@
   "id": "f2ffa997-5fad-4f1e-9467-324c9f9a7c1b",
   "name": "测试查询断言",
   "description": "测试查询断言",
+  "platform": "web",
   "steps": [
     {
       "id": "u1766741425596-0",
@@ -24,7 +25,7 @@
       "action": "当前界面应该包括midscene"
     }
   ],
-  "status": "done",
-  "lastRunAt": 1766741473464,
-  "lastReportPath": "测试查询断言_20251226_173027-f2ffa997-5fad-4f1e-9467-324c9f9a7c1b.html"
+  "status": "error",
+  "lastRunAt": 1767080812359,
+  "lastReportPath": "测试查询断言_20251230_154614802.html"
 }

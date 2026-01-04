@@ -1,0 +1,16 @@
+{
+  "id": "测试搜索iphone_20251231_144803164",
+  "caseId": "e20cfea4-d3e7-4d9e-87cb-45994f1b9b00",
+  "batchId": "1abb0849-5610-454a-aa45-21ba51a1df48",
+  "status": "failed",
+  "progress": 100,
+  "createdAt": 1767163683164,
+  "updatedAt": 1767163683340,
+  "fileName": "测试搜索iphone_20251231_144747_e20cfea4.json",
+  "logs": [
+    "2025-12-31T06:48:03.165Z queued: batch 1abb0849-5610-454a-aa45-21ba51a1df48",
+    "2025-12-31T06:48:03.165Z started",
+    "2025-12-31T06:48:03.340Z finished: failed"
+  ],
+  "errorMessage": "Unable to connect to iOS device pending-connection: AssertionError [ERR_ASSERTION]: Failed to get device pixel ratio from WebDriverAgent API"
+}

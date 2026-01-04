@@ -70,7 +70,7 @@ export async function runTestCase(
       fs.mkdirSync(reportRoot, { recursive: true })
     }
 
-    const reportId = `${executionId}-${testCase.id}`
+    const reportId = executionId
 
     if (!hasModel) {
       updateCallback({ status: 'running', progress: 50 })

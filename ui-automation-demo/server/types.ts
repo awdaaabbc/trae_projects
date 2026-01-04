@@ -2,7 +2,7 @@ export interface TestCase {
   id: string;
   name: string;
   description: string;
-  platform: 'web' | 'android';
+  platform: 'web' | 'android' | 'ios';
   steps: Array<{
     id: string;
     action: string;
@@ -16,6 +16,7 @@ export interface TestCase {
 export interface Execution {
   id: string;
   caseId: string;
+  batchId?: string;
   status: 'queued' | 'running' | 'success' | 'failed';
   progress: number;
   createdAt: number;
@@ -23,4 +24,5 @@ export interface Execution {
   reportPath?: string;
   errorMessage?: string;
   fileName?: string;
+  logs?: string[];
 }

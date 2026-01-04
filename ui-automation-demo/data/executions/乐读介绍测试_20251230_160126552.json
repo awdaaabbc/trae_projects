@@ -1,0 +1,15 @@
+{
+  "id": "乐读介绍测试_20251230_160126552",
+  "caseId": "a2bb5708-04b2-449c-94e5-9e7050466232",
+  "status": "failed",
+  "progress": 100,
+  "createdAt": 1767081686552,
+  "updatedAt": 1767081829628,
+  "fileName": "乐读介绍测试_20251225_164904_a2bb5708.json",
+  "logs": [
+    "2025-12-30T08:01:26.553Z queued",
+    "2025-12-30T08:01:26.553Z started",
+    "2025-12-30T08:03:49.628Z finished: failed"
+  ],
+  "errorMessage": "Execution cancelled"
+}

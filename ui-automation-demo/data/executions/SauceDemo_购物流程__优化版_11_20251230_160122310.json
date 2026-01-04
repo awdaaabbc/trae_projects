@@ -1,0 +1,15 @@
+{
+  "id": "SauceDemo_购物流程__优化版_11_20251230_160122310",
+  "caseId": "saucedemo-optimized-flow",
+  "status": "failed",
+  "progress": 100,
+  "createdAt": 1767081682310,
+  "updatedAt": 1767081829634,
+  "fileName": "SauceDemo_购物流程__优化版_11_20251226_172930_saucedem.json",
+  "logs": [
+    "2025-12-30T08:01:22.310Z queued",
+    "2025-12-30T08:01:22.310Z started",
+    "2025-12-30T08:03:49.634Z finished: failed"
+  ],
+  "errorMessage": "Execution cancelled"
+}

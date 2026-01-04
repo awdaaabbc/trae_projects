@@ -1,0 +1,15 @@
+{
+  "id": "测试火山规划能力_20251231_190756384",
+  "caseId": "decff037-7af6-4243-b6f2-3856c69de468",
+  "status": "success",
+  "progress": 100,
+  "createdAt": 1767179276384,
+  "updatedAt": 1767179382914,
+  "fileName": "测试火山规划能力_20251231_173119_decff037.json",
+  "logs": [
+    "2025-12-31T11:07:56.385Z queued",
+    "2025-12-31T11:07:56.386Z started",
+    "2025-12-31T11:09:42.914Z finished: success"
+  ],
+  "reportPath": "测试火山规划能力_20251231_190756384.html"
+}

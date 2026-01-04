@@ -1,0 +1,16 @@
+{
+  "id": "github测试搜索_AI能力展示_11112123_20251230_160427409",
+  "caseId": "ai-demo-github",
+  "status": "failed",
+  "progress": 100,
+  "createdAt": 1767081867409,
+  "updatedAt": 1767081871791,
+  "fileName": "github测试搜索_AI能力展示_11112123_20251230_154345_ai-demo-.json",
+  "logs": [
+    "2025-12-30T08:04:27.409Z queued",
+    "2025-12-30T08:04:27.410Z started",
+    "2025-12-30T08:04:31.740Z force stopped: process cancelled",
+    "2025-12-30T08:04:31.791Z finished: failed"
+  ],
+  "errorMessage": "Execution cancelled"
+}

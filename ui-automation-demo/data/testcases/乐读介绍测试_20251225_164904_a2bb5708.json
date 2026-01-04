@@ -2,6 +2,7 @@
   "id": "a2bb5708-04b2-449c-94e5-9e7050466232",
   "name": "乐读介绍测试",
   "description": "乐读介绍",
+  "platform": "web",
   "steps": [
     {
       "id": "u1766652544745-0",
@@ -65,5 +66,5 @@
     }
   ],
   "status": "error",
-  "lastRunAt": 1766736491669
+  "lastRunAt": 1767081829623
 }

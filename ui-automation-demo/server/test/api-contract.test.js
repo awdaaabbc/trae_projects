@@ -136,7 +136,84 @@ test('创建用例/执行用例/查看报告：接口契约与流程联调', asy
 })
 
 test(
-  '并发创建用例：返回唯一 id 且可全部检索',
+  '批量执行用例：返回 batchId 且执行结束后报告可访问',
+  { timeout: 30000 },
+  async () => {
+    const srv = startServer()
+    const port = await srv.ready
+    const base = `http://localhost:${port}`
+
+    try {
+      const n = 6
+      const caseIds = await Promise.all(
+        Array.from({ length: n }, async (_, i) => {
+          const createRes = await fetch(`${base}/api/testcases`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: `批量-${Date.now()}-${i}`,
+              description: '批量执行联调',
+              platform: 'web',
+              steps: [{ id: 's1', type: 'action', action: '打开 https://example.com' }],
+            }),
+          })
+          assert.equal(createRes.status, 200)
+          const created = await createRes.json()
+          const caseId = created?.data?.id
+          assert.ok(typeof caseId === 'string')
+          return caseId
+        })
+      )
+
+      const batchRes = await fetch(`${base}/api/batch-execute`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ caseIds }),
+      })
+      assert.equal(batchRes.status, 200)
+      const batchJson = await batchRes.json()
+      const batchId = batchJson?.data?.batchId
+      const executions = batchJson?.data?.executions
+      assert.ok(typeof batchId === 'string')
+      assert.ok(Array.isArray(executions))
+      assert.equal(executions.length, n)
+
+      const exeIds = executions.map((e) => e.id)
+      assert.equal(new Set(exeIds).size, exeIds.length)
+      for (const e of executions) {
+        assert.equal(e.batchId, batchId)
+      }
+
+      const finalExecutions = await waitFor(async () => {
+        const exRes = await fetch(`${base}/api/executions`)
+        assert.equal(exRes.status, 200)
+        const exJson = await exRes.json()
+        const list = Array.isArray(exJson?.data) ? exJson.data : []
+        const done = list.filter(
+          (e) =>
+            exeIds.includes(e.id) &&
+            (e.status === 'success' || e.status === 'failed') &&
+            e.batchId === batchId
+        )
+        if (done.length !== n) return null
+        return done
+      }, 20000)
+
+      assert.ok(finalExecutions, '批量执行未在超时窗口内全部结束')
+
+      for (const exe of finalExecutions) {
+        assert.ok(exe.reportPath, `执行 ${exe.id} 结束后应返回 reportPath`)
+        const reportRes = await fetch(`${base}/reports/${exe.reportPath}`)
+        assert.equal(reportRes.status, 200)
+      }
+    } finally {
+      await srv.stop()
+    }
+  }
+)
+
+test(
+  '并发创建用例：接口应返回唯一 ID 且列表可检索',
   { timeout: 30000 },
   async () => {
     const srv = startServer()

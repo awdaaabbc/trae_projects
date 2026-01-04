@@ -2,7 +2,6 @@
 import type { Execution, TestCase } from './types.js'
 import fs from 'node:fs'
 import path from 'node:path'
-import crypto from 'node:crypto'
 
 const DATA_DIR = process.env.UI_AUTOMATION_DATA_DIR
   ? path.resolve(process.env.UI_AUTOMATION_DATA_DIR)
@@ -34,7 +33,7 @@ function loadCases() {
           id: parsed.id || '',
           name: parsed.name || '',
           description: parsed.description || '',
-          platform: parsed.platform === 'android' ? 'android' : 'web',
+          platform: parsed.platform === 'android' ? 'android' : parsed.platform === 'ios' ? 'ios' : 'web',
           steps: Array.isArray(parsed.steps) ? parsed.steps : [],
           status: parsed.status || 'idle',
           lastRunAt: parsed.lastRunAt,
@@ -75,6 +74,13 @@ function sanitizeFilename(name: string) {
 function formatDate(ts: number) {
   const d = new Date(ts)
   return `${d.getFullYear()}${(d.getMonth() + 1).toString().padStart(2, '0')}${d.getDate().toString().padStart(2, '0')}_${d.getHours().toString().padStart(2, '0')}${d.getMinutes().toString().padStart(2, '0')}${d.getSeconds().toString().padStart(2, '0')}`
+}
+
+function formatDateWithMs(ts: number) {
+  const d = new Date(ts)
+  const base = formatDate(ts)
+  const ms = d.getMilliseconds().toString().padStart(3, '0')
+  return `${base}${ms}`
 }
 
 // Save case to disk
@@ -131,8 +137,14 @@ function reloadCases() {
 export const Storage = {
   reloadCases, // Export reload function
   generateExecutionId(tcName: string) {
-    const suffix = crypto.randomBytes(3).toString('hex')
-    return `${sanitizeFilename(tcName)}_${formatDate(Date.now())}_${suffix}`
+    const base = `${sanitizeFilename(tcName)}_${formatDateWithMs(Date.now())}`
+    let id = base
+    let i = 0
+    while (executions[id]) {
+      i += 1
+      id = `${base}_${i}`
+    }
+    return id
   },
   getCaseFilename(id: string) {
     return caseFileById[id]
@@ -200,5 +212,33 @@ export const Storage = {
     })
 
     return true
+  },
+  resetPendingExecutions() {
+    const pending = Object.values(executions).filter(
+      (e) => e.status === 'running' || e.status === 'queued'
+    )
+    if (pending.length === 0) return 0
+
+    console.log(`Resetting ${pending.length} pending executions...`)
+    for (const exe of pending) {
+      const updated: Execution = {
+        ...exe,
+        status: 'failed',
+        progress: 100,
+        errorMessage: '服务异常终止，状态已重置',
+        updatedAt: Date.now(),
+      }
+      executions[exe.id] = updated
+      persistExecution(updated)
+
+      // Also update the test case status
+       const tc = cases[exe.caseId]
+       if (tc && tc.status === 'running') {
+          const updatedTc = { ...tc, status: 'error' as const }
+          cases[tc.id] = updatedTc
+          persistCase(updatedTc)
+       }
+    }
+    return pending.length
   }
 }

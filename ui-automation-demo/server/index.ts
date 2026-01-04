@@ -1,10 +1,10 @@
+import 'dotenv/config'
 import exp from 'express'
 import type { Request, Response, NextFunction } from 'express'
 import { WebSocketServer, WebSocket } from 'ws'
 import path from 'node:path'
 import http from 'node:http'
 import crypto from 'node:crypto'
-import dotenv from 'dotenv'
 import { Storage } from './storage.js'
 import type { Execution, TestCase } from './types.js'
 import { runTestCase as runWebTestCase, cancelExecution as cancelWebExecution } from './runner.js'
@@ -12,8 +12,10 @@ import {
   runTestCase as runAndroidTestCase,
   cancelExecution as cancelAndroidExecution,
 } from './runner.android.js'
-
-dotenv.config()
+import {
+  runTestCase as runIosTestCase,
+  cancelExecution as cancelIosExecution,
+} from './runner.ios.js'
 
 const app = exp()
 app.use(exp.json())
@@ -45,6 +47,146 @@ function normalizeReportPath(p: string | undefined) {
   return base
 }
 
+type QueueJob = {
+  exeId: string
+  caseId: string
+}
+
+const MAX_CONCURRENCY = process.env.UI_AUTOMATION_MAX_CONCURRENCY
+  ? Math.max(1, Number(process.env.UI_AUTOMATION_MAX_CONCURRENCY) || 5)
+  : 5
+
+const queue: QueueJob[] = []
+const queuedByExeId = new Map<string, QueueJob>()
+let runningCount = 0
+
+function isCaseActive(caseId: string) {
+  return Storage.listExecutions().some(
+    (e) => e.caseId === caseId && (e.status === 'queued' || e.status === 'running'),
+  )
+}
+
+function ensureCaseStatusAfterExecution(
+  caseId: string,
+  last: { status: 'done' | 'error'; reportPath?: string },
+) {
+  const active = isCaseActive(caseId)
+  const patch: Partial<TestCase> = active
+    ? { status: 'running' }
+    : {
+        status: last.status,
+        lastRunAt: Date.now(),
+        lastReportPath: last.reportPath,
+      }
+  Storage.updateCase(caseId, patch)
+  broadcast({ type: 'testcase', payload: Storage.getCase(caseId) })
+}
+
+function appendExecutionLog(exeId: string, line: string) {
+  const exe = Storage.getExecution(exeId)
+  const prev = Array.isArray(exe?.logs) ? exe.logs : []
+  const next = prev.length >= 200 ? prev.slice(prev.length - 199) : prev
+  const logs = [...next, `${new Date().toISOString()} ${line}`]
+  Storage.updateExecution(exeId, { logs })
+  broadcast({ type: 'execution', payload: Storage.getExecution(exeId) })
+}
+
+function enqueue(job: QueueJob) {
+  queue.push(job)
+  queuedByExeId.set(job.exeId, job)
+  pumpQueue()
+}
+
+function removeQueued(exeId: string) {
+  const job = queuedByExeId.get(exeId)
+  if (!job) return false
+  queuedByExeId.delete(exeId)
+  const idx = queue.findIndex((j) => j.exeId === exeId)
+  if (idx >= 0) queue.splice(idx, 1)
+  return true
+}
+
+function pumpQueue() {
+  while (runningCount < MAX_CONCURRENCY && queue.length > 0) {
+    const job = queue.shift()!
+    if (!queuedByExeId.has(job.exeId)) continue
+    void runJob(job)
+  }
+}
+
+async function runJob(job: QueueJob) {
+  const { exeId, caseId } = job
+  queuedByExeId.delete(exeId)
+  runningCount += 1
+
+  try {
+    const tc = Storage.getCase(caseId)
+    if (!tc) {
+      Storage.updateExecution(exeId, {
+        status: 'failed',
+        progress: 100,
+        errorMessage: '测试用例不存在或已删除',
+      })
+      broadcast({ type: 'execution', payload: Storage.getExecution(exeId) })
+      appendExecutionLog(exeId, 'failed: testcase missing')
+      return
+    }
+
+    Storage.updateExecution(exeId, { status: 'running', progress: 0 })
+    broadcast({ type: 'execution', payload: Storage.getExecution(exeId) })
+    appendExecutionLog(exeId, 'started')
+
+    let runner
+    if (tc.platform === 'android') {
+      runner = runAndroidTestCase
+    } else if (tc.platform === 'ios') {
+      runner = runIosTestCase
+    } else {
+      runner = runWebTestCase
+    }
+
+    const result = await runner(tc, exeId, (patch) => {
+      const normalizedPatch =
+        patch.reportPath ? { ...patch, reportPath: normalizeReportPath(patch.reportPath) } : patch
+      Storage.updateExecution(exeId, normalizedPatch)
+      broadcast({ type: 'execution', payload: Storage.getExecution(exeId) })
+    })
+
+    const finalReportPath = normalizeReportPath(result.reportPath)
+    Storage.updateExecution(exeId, {
+      status: result.status === 'success' ? 'success' : 'failed',
+      progress: 100,
+      reportPath: finalReportPath,
+      errorMessage: result.errorMessage,
+    })
+    broadcast({ type: 'execution', payload: Storage.getExecution(exeId) })
+
+    if (finalReportPath) {
+      Storage.updateCase(caseId, {
+        lastRunAt: Date.now(),
+        lastReportPath: finalReportPath,
+      })
+      broadcast({ type: 'testcase', payload: Storage.getCase(caseId) })
+    }
+
+    const caseFinalStatus = result.status === 'success' ? 'done' : 'error'
+    ensureCaseStatusAfterExecution(caseId, { status: caseFinalStatus, reportPath: finalReportPath })
+    appendExecutionLog(exeId, caseFinalStatus === 'done' ? 'finished: success' : 'finished: failed')
+  } catch (err) {
+    Storage.updateExecution(exeId, {
+      status: 'failed',
+      errorMessage: err instanceof Error ? err.message : String(err),
+      progress: 100,
+    })
+    broadcast({ type: 'execution', payload: Storage.getExecution(exeId) })
+    ensureCaseStatusAfterExecution(caseId, { status: 'error' })
+    appendExecutionLog(exeId, `failed: ${err instanceof Error ? err.message : String(err)}`)
+  } finally {
+    runningCount = Math.max(0, runningCount - 1)
+    pumpQueue()
+  }
+}
+
 // Basic health endpoint
 app.get('/api/health', (_req: Request, res: Response) => {
   res.json({ ok: true })
@@ -63,9 +205,11 @@ app.post('/api/testcases', (req: Request, res: Response) => {
     const platform =
       body.platform === 'android'
         ? 'android'
-        : body.platform === 'web'
-          ? 'web'
-          : existing?.platform || 'web'
+        : body.platform === 'ios'
+          ? 'ios'
+          : body.platform === 'web'
+            ? 'web'
+            : existing?.platform || 'web'
     
     const tc: TestCase = {
       id,
@@ -141,59 +285,89 @@ app.post('/api/execute/:id', async (req: Request, res: Response) => {
   }
   Storage.saveExecution(exe)
   broadcast({ type: 'execution', payload: Storage.getExecution(exeId) })
-  ;(async () => {
-    const runner = tc.platform === 'android' ? runAndroidTestCase : runWebTestCase
-    const result = await runner(tc, exeId, (patch) => {
-      const normalizedPatch =
-        patch.reportPath ? { ...patch, reportPath: normalizeReportPath(patch.reportPath) } : patch
-      Storage.updateExecution(exeId, normalizedPatch)
-      if (normalizedPatch.reportPath) {
-        Storage.updateCase(id, {
-          lastRunAt: Date.now(),
-          lastReportPath: normalizedPatch.reportPath,
-        })
-      }
-      broadcast({
-        type: 'execution',
-        payload: Storage.getExecution(exeId),
-      })
-    })
-    const finalReportPath = normalizeReportPath(result.reportPath)
-    Storage.updateExecution(exeId, {
-      status: result.status === 'success' ? 'success' : 'failed',
-      progress: 100,
-      reportPath: finalReportPath,
-      errorMessage: result.errorMessage,
-    })
-    broadcast({ type: 'execution', payload: Storage.getExecution(exeId) })
-    Storage.updateCase(id, {
-      status: result.status === 'success' ? 'done' : 'error',
-      lastRunAt: Date.now(),
-      lastReportPath: finalReportPath,
-    })
-    broadcast({ type: 'testcase', payload: Storage.getCase(id) })
-  })().catch((err) => {
-    Storage.updateExecution(exeId, { status: 'failed', errorMessage: String(err), progress: 100 })
-    broadcast({ type: 'execution', payload: Storage.getExecution(exeId) })
-    Storage.updateCase(id, { status: 'error' })
-    broadcast({ type: 'testcase', payload: Storage.getCase(id) })
-  })
+  appendExecutionLog(exeId, 'queued')
+  enqueue({ exeId, caseId: id })
   res.json({ data: Storage.getExecution(exeId) })
+})
+
+app.post('/api/batch-execute', (req: Request, res: Response) => {
+  const body = req.body as { caseIds?: unknown }
+  const caseIdsRaw = body?.caseIds
+  const caseIds = Array.isArray(caseIdsRaw) ? caseIdsRaw.filter((x) => typeof x === 'string') : []
+
+  if (caseIds.length === 0) {
+    return res.status(400).json({ error: 'caseIds 不能为空数组' })
+  }
+
+  const missing = caseIds.filter((id) => !Storage.getCase(id))
+  if (missing.length > 0) {
+    return res.status(404).json({ error: `未找到测试用例: ${missing.join(', ')}` })
+  }
+
+  const batchId = crypto.randomUUID()
+  const executionsCreated: Execution[] = []
+
+  for (const id of caseIds) {
+    const tc = Storage.getCase(id)!
+    const fileName = Storage.getCaseFilename(id)
+
+    Storage.updateCase(id, { status: 'running' })
+    broadcast({ type: 'testcase', payload: Storage.getCase(id) })
+
+    const exeId = Storage.generateExecutionId(tc.name)
+    const createdAt = Date.now()
+    const exe: Execution = {
+      id: exeId,
+      caseId: id,
+      batchId,
+      status: 'queued',
+      progress: 0,
+      createdAt,
+      updatedAt: createdAt,
+      fileName,
+    }
+    Storage.saveExecution(exe)
+    broadcast({ type: 'execution', payload: Storage.getExecution(exeId) })
+    appendExecutionLog(exeId, `queued: batch ${batchId}`)
+    enqueue({ exeId, caseId: id })
+    const saved = Storage.getExecution(exeId)
+    if (saved) executionsCreated.push(saved)
+  }
+
+  res.json({
+    data: {
+      batchId,
+      executions: executionsCreated,
+    },
+  })
 })
 
 app.post('/api/stop-execution/:id', (req: Request, res: Response) => {
   const id = req.params.id
   if (!id) return res.status(400).json({ error: 'Missing execution ID' })
-  
+
   const exe = Storage.getExecution(id)
+  if (!exe) return res.status(404).json({ error: 'Execution not found or already finished' })
+
+  if (removeQueued(id)) {
+    Storage.updateExecution(id, { status: 'failed', errorMessage: 'Cancelled', progress: 100 })
+    broadcast({ type: 'execution', payload: Storage.getExecution(id) })
+    appendExecutionLog(id, 'cancelled: removed from queue')
+    ensureCaseStatusAfterExecution(exe.caseId, { status: 'error' })
+    return res.json({ ok: true })
+  }
+
   const tc = exe ? Storage.getCase(exe.caseId) : undefined
   const success =
     tc?.platform === 'android'
       ? cancelAndroidExecution(id)
-      : tc?.platform === 'web'
-        ? cancelWebExecution(id)
-        : cancelWebExecution(id) || cancelAndroidExecution(id)
+      : tc?.platform === 'ios'
+        ? cancelIosExecution(id)
+        : tc?.platform === 'web'
+          ? cancelWebExecution(id)
+          : cancelWebExecution(id) || cancelAndroidExecution(id) || cancelIosExecution(id)
   if (success) {
+    appendExecutionLog(id, 'cancel requested')
     res.json({ ok: true })
   } else {
     res.status(404).json({ error: 'Execution not found or already finished' })
@@ -209,6 +383,82 @@ app.delete('/api/testcases/:id', (req: Request, res: Response) => {
     res.status(204).send()
   } else {
     res.status(404).json({ error: 'Test case not found' })
+  }
+})
+
+app.post('/api/admin/reset-status', (_req: Request, res: Response) => {
+  try {
+    const count = Storage.resetPendingExecutions()
+    broadcast({ type: 'error', payload: { message: `已强制重置 ${count} 个异常状态任务` } })
+    // Also broadcast full refresh
+    res.json({ data: { count } })
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : String(err) })
+  }
+})
+
+app.post('/api/admin/stop-all', (_req: Request, res: Response) => {
+  try {
+    const runningOrQueued = Storage.listExecutions().filter(
+      (e) => e.status === 'running' || e.status === 'queued'
+    )
+
+    let count = 0
+    for (const exe of runningOrQueued) {
+      const id = exe.id
+      let stopped = false
+
+      // 1. Try to remove from queue first
+      if (removeQueued(id)) {
+        stopped = true
+        appendExecutionLog(id, 'force stopped: removed from queue')
+      } else {
+        // 2. Try to cancel running process
+        // We don't know for sure if it's web or android without checking the case, 
+        // but it's safe to try both or check the case platform.
+        const tc = Storage.getCase(exe.caseId)
+        const isAndroid = tc?.platform === 'android'
+        const isIos = tc?.platform === 'ios'
+        const isWeb = tc?.platform === 'web'
+
+        if (isAndroid) {
+           if (cancelAndroidExecution(id)) stopped = true
+        } else if (isIos) {
+           if (cancelIosExecution(id)) stopped = true
+        } else if (isWeb) {
+           if (cancelWebExecution(id)) stopped = true
+        } else {
+           // Fallback if platform unknown
+           if (cancelWebExecution(id)) stopped = true
+           if (cancelAndroidExecution(id)) stopped = true
+           if (cancelIosExecution(id)) stopped = true
+        }
+        
+        if (stopped) {
+           appendExecutionLog(id, 'force stopped: process cancelled')
+        } else {
+           appendExecutionLog(id, 'force stopped: process not found, resetting status')
+        }
+      }
+
+      // 3. Force update status regardless of whether we found the process
+      // This ensures no zombie "running" states remain in DB
+      Storage.updateExecution(id, {
+        status: 'failed',
+        errorMessage: '强制停止所有任务',
+        progress: 100
+      })
+      broadcast({ type: 'execution', payload: Storage.getExecution(id) })
+      
+      // Update case status
+      ensureCaseStatusAfterExecution(exe.caseId, { status: 'error' })
+      
+      count++
+    }
+
+    res.json({ data: { count } })
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : String(err) })
   }
 })
 
@@ -255,6 +505,12 @@ function broadcast(msg: WSMessage) {
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3002
 server.listen(PORT, () => {
+  // Reset any pending executions from previous runs
+  const count = Storage.resetPendingExecutions()
+  if (count > 0) {
+    console.log(`[Startup] Reset ${count} pending executions from previous session`)
+  }
+
   const addr = server.address()
   const actualPort = typeof addr === 'object' && addr ? addr.port : PORT
   console.log(`Server listening on http://localhost:${actualPort}`)

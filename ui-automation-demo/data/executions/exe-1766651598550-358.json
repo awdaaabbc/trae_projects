@@ -1,8 +1,9 @@
 {
   "id": "exe-1766651598550-358",
   "caseId": "a2bb5708-04b2-449c-94e5-9e7050466232",
-  "status": "queued",
-  "progress": 0,
+  "status": "failed",
+  "progress": 100,
   "createdAt": 1766651598550,
-  "updatedAt": 1766651598550
+  "updatedAt": 1767081226189,
+  "errorMessage": "服务异常终止，状态已重置"
 }

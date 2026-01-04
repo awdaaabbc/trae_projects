@@ -1,0 +1,16 @@
+{
+  "id": "111_20251231_144803161",
+  "caseId": "68adcaca-33f8-4dbf-9def-26512034bb9a",
+  "batchId": "1abb0849-5610-454a-aa45-21ba51a1df48",
+  "status": "success",
+  "progress": 100,
+  "createdAt": 1767163683161,
+  "updatedAt": 1767163718997,
+  "fileName": "111_20251231_143027_68adcaca.json",
+  "logs": [
+    "2025-12-31T06:48:03.162Z queued: batch 1abb0849-5610-454a-aa45-21ba51a1df48",
+    "2025-12-31T06:48:03.163Z started",
+    "2025-12-31T06:48:38.997Z finished: success"
+  ],
+  "reportPath": "111_20251231_144803161.html"
+}

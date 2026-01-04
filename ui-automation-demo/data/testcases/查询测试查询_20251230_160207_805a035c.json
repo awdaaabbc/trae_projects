@@ -2,6 +2,7 @@
   "id": "805a035c-e0fc-4463-9c36-4977390ed866",
   "name": "查询测试查询",
   "description": "测试前端输入查询生成的用例类型是否是query",
+  "platform": "web",
   "steps": [
     {
       "id": "u1766733205175-0",
@@ -24,5 +25,6 @@
       "action": "判断是否包含midscene"
     }
   ],
-  "status": "idle"
+  "status": "error",
+  "lastRunAt": 1767081730407
 }

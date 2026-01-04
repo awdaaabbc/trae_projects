@@ -1,0 +1,16 @@
+{
+  "id": "68adcaca-33f8-4dbf-9def-26512034bb9a",
+  "name": "111",
+  "description": "111",
+  "platform": "ios",
+  "steps": [
+    {
+      "id": "u1767162627622-0",
+      "type": "action",
+      "action": "打开浏览器搜索ebay"
+    }
+  ],
+  "status": "done",
+  "lastRunAt": 1767163718997,
+  "lastReportPath": "111_20251231_144803161.html"
+}

@@ -2,6 +2,7 @@
   "id": "sample-login",
   "name": "SauceDemo 登录下单流程",
   "description": "访问 saucedemo.com，登录后添加商品到购物车并结账（演示用）",
+  "platform": "web",
   "steps": [
     {
       "id": "u1766739383812-0",
@@ -64,6 +65,6 @@
       "action": "点击 Finish"
     }
   ],
-  "status": "running",
-  "lastRunAt": 1766740026587
+  "status": "error",
+  "lastRunAt": 1767081871788
 }

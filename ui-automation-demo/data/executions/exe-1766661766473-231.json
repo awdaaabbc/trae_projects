@@ -1,8 +1,9 @@
 {
   "id": "exe-1766661766473-231",
   "caseId": "sample-login",
-  "status": "queued",
-  "progress": 0,
+  "status": "failed",
+  "progress": 100,
   "createdAt": 1766661766473,
-  "updatedAt": 1766661766473
+  "updatedAt": 1767081226194,
+  "errorMessage": "服务异常终止，状态已重置"
 }

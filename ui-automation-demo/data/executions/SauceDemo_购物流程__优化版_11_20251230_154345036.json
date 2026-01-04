@@ -1,0 +1,16 @@
+{
+  "id": "SauceDemo_购物流程__优化版_11_20251230_154345036",
+  "caseId": "saucedemo-optimized-flow",
+  "batchId": "91267b84-1dca-4230-8bab-4e06a75bc6e0",
+  "status": "failed",
+  "progress": 100,
+  "createdAt": 1767080625036,
+  "updatedAt": 1767080663197,
+  "fileName": "SauceDemo_购物流程__优化版_11_20251226_172930_saucedem.json",
+  "logs": [
+    "2025-12-30T07:43:45.036Z queued: batch 91267b84-1dca-4230-8bab-4e06a75bc6e0",
+    "2025-12-30T07:43:45.036Z started",
+    "2025-12-30T07:44:23.197Z finished: failed"
+  ],
+  "errorMessage": "Execution cancelled"
+}

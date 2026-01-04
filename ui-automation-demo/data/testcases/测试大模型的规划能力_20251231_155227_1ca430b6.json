@@ -1,0 +1,15 @@
+{
+  "id": "1ca430b6-2967-4e93-9f9e-487f114d6ef9",
+  "name": "测试大模型的规划能力",
+  "description": "",
+  "platform": "android",
+  "steps": [
+    {
+      "id": "u1767167547960-0",
+      "type": "action",
+      "action": "点击带有乐读小班图片的app，找到数学课中的新生体验活动并报名，然后返回主页"
+    }
+  ],
+  "status": "error",
+  "lastRunAt": 1767167673872
+}

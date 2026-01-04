@@ -1,0 +1,14 @@
+{
+  "id": "测试火山规划能力_20251231_173406517",
+  "caseId": "decff037-7af6-4243-b6f2-3856c69de468",
+  "status": "failed",
+  "progress": 100,
+  "createdAt": 1767173646517,
+  "updatedAt": 1767173648519,
+  "fileName": "测试火山规划能力_20251231_173119_decff037.json",
+  "logs": [
+    "2025-12-31T09:34:06.519Z queued",
+    "2025-12-31T09:34:06.520Z started"
+  ],
+  "errorMessage": "服务异常终止，状态已重置"
+}

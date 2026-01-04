@@ -1,0 +1,15 @@
+{
+  "id": "测试大模型的规划能力_20251231_155229930",
+  "caseId": "1ca430b6-2967-4e93-9f9e-487f114d6ef9",
+  "status": "failed",
+  "progress": 100,
+  "createdAt": 1767167549930,
+  "updatedAt": 1767167673873,
+  "fileName": "测试大模型的规划能力_20251231_155227_1ca430b6.json",
+  "logs": [
+    "2025-12-31T07:52:29.931Z queued",
+    "2025-12-31T07:52:29.932Z started",
+    "2025-12-31T07:54:33.873Z finished: failed"
+  ],
+  "errorMessage": "Step timeout (2min)"
+}

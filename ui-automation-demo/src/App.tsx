@@ -13,6 +13,7 @@ import {
   Form,
   Input,
   Select,
+  Checkbox,
   message,
   Progress,
   Empty,
@@ -32,6 +33,9 @@ import {
   RocketOutlined,
   StopOutlined,
   DeleteOutlined,
+  AppleOutlined,
+  AndroidOutlined,
+  GlobalOutlined,
 } from '@ant-design/icons'
 import './App.css'
 
@@ -48,7 +52,7 @@ type TestCase = {
   id: string
   name: string
   description?: string
-  platform: 'web' | 'android'
+  platform: 'web' | 'android' | 'ios'
   steps: TestStep[]
   status: 'idle' | 'running' | 'done' | 'error'
   lastRunAt?: number
@@ -57,6 +61,7 @@ type TestCase = {
 type Execution = {
   id: string
   caseId: string
+  batchId?: string
   status: 'queued' | 'running' | 'success' | 'failed'
   progress: number
   createdAt: number
@@ -64,6 +69,7 @@ type Execution = {
   reportPath?: string
   errorMessage?: string
   fileName?: string
+  logs?: string[]
 }
 
 async function api<T>(url: string, init?: RequestInit) {
@@ -127,12 +133,27 @@ function App() {
     id: '',
     name: '',
     description: '',
-    platform: 'web' as 'web' | 'android',
+    platform: 'web' as 'web' | 'android' | 'ios',
     stepsText: '',
   })
   
+  const isValid = useMemo(() => {
+    return creating.name.trim() && creating.stepsText.trim()
+  }, [creating.name, creating.stepsText])
+  
   // UI state
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isBatchModalOpen, setIsBatchModalOpen] = useState(false)
+  const [batchTab, setBatchTab] = useState<'select' | 'status'>('select')
+  const [batchSearch, setBatchSearch] = useState('')
+  const [batchPlatform, setBatchPlatform] = useState<'all' | 'web' | 'android' | 'ios'>('all')
+  const [batchSelected, setBatchSelected] = useState<Set<string>>(new Set())
+  const [batchSubmitting, setBatchSubmitting] = useState(false)
+  const [currentBatchId, setCurrentBatchId] = useState<string | null>(null)
+  const [logModal, setLogModal] = useState<{ open: boolean; exeId: string | null }>({
+    open: false,
+    exeId: null,
+  })
   const [messageApi, contextHolder] = message.useMessage()
   const wsRef = useRef<WebSocket | null>(null)
 
@@ -191,6 +212,29 @@ function App() {
     () => cases.find((c) => c.id === selectedCase) || null,
     [cases, selectedCase],
   )
+
+  const filteredBatchCases = useMemo(() => {
+    const kw = batchSearch.trim().toLowerCase()
+    return cases.filter((c) => {
+      if (batchPlatform !== 'all' && c.platform !== batchPlatform) return false
+      if (!kw) return true
+      const hay = `${c.name} ${c.description || ''}`.toLowerCase()
+      return hay.includes(kw)
+    })
+  }, [cases, batchSearch, batchPlatform])
+
+  const currentBatchExecutions = useMemo(() => {
+    if (!currentBatchId) return []
+    return executions
+      .filter((e) => e.batchId === currentBatchId)
+      .slice()
+      .sort((a, b) => b.createdAt - a.createdAt)
+  }, [executions, currentBatchId])
+
+  const logExecution = useMemo(() => {
+    if (!logModal.exeId) return null
+    return executions.find((e) => e.id === logModal.exeId) || null
+  }, [executions, logModal.exeId])
 
   // Sync selection to form state
   useEffect(() => {
@@ -298,6 +342,28 @@ function App() {
     }
   }
 
+  async function batchExecute(caseIds: string[]) {
+    setBatchSubmitting(true)
+    try {
+      const res = await api<{ batchId: string; executions: Execution[] }>('/api/batch-execute', {
+        method: 'POST',
+        body: JSON.stringify({ caseIds }),
+      })
+      setCurrentBatchId(res.data.batchId)
+      setBatchTab('status')
+      setExecutions((prev) => {
+        const byId = new Map(prev.map((e) => [e.id, e]))
+        for (const exe of res.data.executions) byId.set(exe.id, exe)
+        return Array.from(byId.values()).sort((a, b) => b.createdAt - a.createdAt)
+      })
+      messageApi.success(`批量任务已提交（${caseIds.length}条）`)
+    } catch (e) {
+      messageApi.error('批量执行失败: ' + (e instanceof Error ? e.message : '未知错误'))
+    } finally {
+      setBatchSubmitting(false)
+    }
+  }
+
   async function stopExecution(id: string) {
     try {
       await api(`/api/stop-execution/${id}`, { method: 'POST' })
@@ -318,11 +384,48 @@ function App() {
     }
   }
 
+  async function resetStatus() {
+    try {
+      const res = await api<{ count: number }>('/api/admin/reset-status', { method: 'POST' })
+      if (res.data.count > 0) {
+        messageApi.success(`状态已重置，修复了 ${res.data.count} 个异常任务`)
+      } else {
+        messageApi.info('状态正常，无需修复')
+      }
+      refreshData()
+    } catch (e) {
+      messageApi.error('重置失败: ' + (e instanceof Error ? e.message : '未知错误'))
+    }
+  }
+
+  async function stopAllExecutions() {
+    try {
+      const res = await api<{ count: number }>('/api/admin/stop-all', { method: 'POST' })
+      if (res.data.count > 0) {
+        messageApi.success(`已停止 ${res.data.count} 个正在运行的任务`)
+      } else {
+        messageApi.info('当前没有正在运行的任务')
+      }
+      refreshData()
+    } catch (e) {
+      messageApi.error('一键停止失败: ' + (e instanceof Error ? e.message : '未知错误'))
+    }
+  }
+
   // UI Handlers
   const handleCreateClick = () => {
     setSelectedCase(null)
     setCreating({ id: '', name: '', description: '', platform: 'web', stepsText: '' })
     setIsModalOpen(true)
+  }
+
+  const handleBatchClick = () => {
+    setIsBatchModalOpen(true)
+    setBatchTab('select')
+    setBatchSearch('')
+    setBatchPlatform('all')
+    setBatchSelected(new Set())
+    setCurrentBatchId(null)
   }
 
   const handleEditClick = () => {
@@ -360,7 +463,21 @@ function App() {
       <Sider width={300} theme="light" style={{ borderRight: '1px solid #f0f0f0' }}>
         <div style={{ padding: '16px', borderBottom: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Title level={4} style={{ margin: 0, fontSize: '18px' }}><RocketOutlined /> UI 自动化</Title>
-          <Button type="primary" shape="circle" icon={<PlusOutlined />} onClick={handleCreateClick} />
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <Popconfirm
+              title="确定要停止所有任务吗？"
+              description="这将强制终止所有正在运行和排队中的任务。"
+              onConfirm={stopAllExecutions}
+              okText="停止"
+              cancelText="取消"
+              okButtonProps={{ danger: true }}
+            >
+              <Button danger icon={<StopOutlined />} title="一键停止所有任务" />
+            </Popconfirm>
+            <Button icon={<SyncOutlined />} onClick={resetStatus} title="强制重置状态" />
+            <Button icon={<PlayCircleOutlined />} onClick={handleBatchClick}>批量执行</Button>
+            <Button type="primary" shape="circle" icon={<PlusOutlined />} onClick={handleCreateClick} />
+          </div>
         </div>
         <div style={{ height: 'calc(100vh - 65px)', overflowY: 'auto' }}>
           <Menu
@@ -370,7 +487,12 @@ function App() {
               key: c.id,
               label: (
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 160 }}>{c.name}</span>
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 160 }}>
+                    {c.platform === 'android' ? <AndroidOutlined style={{ marginRight: 4, color: '#3ddc84' }} /> : 
+                     c.platform === 'ios' ? <AppleOutlined style={{ marginRight: 4, color: '#000' }} /> :
+                     <GlobalOutlined style={{ marginRight: 4, color: '#1890ff' }} />}
+                    {c.name}
+                  </span>
                   {getStatusTag(c.status)}
                 </div>
               ),
@@ -384,20 +506,20 @@ function App() {
       <Layout>
         <Content style={{ padding: '24px', overflowY: 'auto', background: '#fff' }}>
           {selected ? (
-            <Space direction="vertical" size="large" style={{ width: '100%' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%' }}>
               {/* Header */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
                   <Title level={2} style={{ margin: 0 }}>{selected.name}</Title>
                   <Text type="secondary">{selected.description || '暂无描述'}</Text>
                   <div style={{ marginTop: 8 }}>
-                    <Space>
+                    <div style={{ display: 'flex', gap: '8px' }}>
                       {getStatusTag(selected.status)}
                       <Text type="secondary"><ClockCircleOutlined /> 上次运行: {formatTime(selected.lastRunAt)}</Text>
-                    </Space>
+                    </div>
                   </div>
                 </div>
-                <Space>
+                <div style={{ display: 'flex', gap: '8px' }}>
                   <Button icon={<EditOutlined />} onClick={handleEditClick} disabled={selected.status === 'running'}>编辑用例</Button>
                   <Popconfirm
                     title="删除测试用例"
@@ -430,7 +552,7 @@ function App() {
                       执行测试
                     </Button>
                   )}
-                </Space>
+                </div>
               </div>
 
               <Tabs
@@ -444,12 +566,12 @@ function App() {
                             dataSource={selected.steps}
                             renderItem={(item, index) => (
                               <List.Item>
-                                <Space>
+                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                                   <Badge count={index + 1} style={{ backgroundColor: '#1890ff' }} />
                                   {item.type === 'query' && <Tag color="blue">查询</Tag>}
                                   {item.type === 'assert' && <Tag color="orange">断言</Tag>}
                                   <Text>{item.action}</Text>
-                                </Space>
+                                </div>
                               </List.Item>
                             )}
                           />
@@ -479,17 +601,17 @@ function App() {
                             <List.Item.Meta
                               avatar={getStatusTag(item.status)}
                               title={
-                                <Space>
+                                <div style={{ display: 'flex', gap: '8px' }}>
                                   <span>执行ID: {item.id}</span>
                                   {item.fileName && <Tag color="default" style={{ fontSize: '12px' }}>{item.fileName}</Tag>}
-                                </Space>
+                                </div>
                               }
                               description={
-                                <Space direction="vertical" size={0}>
+                                <div style={{ display: 'flex', flexDirection: 'column' }}>
                                   <Text type="secondary">{formatTime(item.updatedAt)}</Text>
                                   {item.status === 'running' && <Progress percent={item.progress} size="small" style={{ width: 140 }} />}
                                   {item.errorMessage && <Text type="danger">{item.errorMessage}</Text>}
-                                </Space>
+                                </div>
                               }
                             />
                           </List.Item>
@@ -500,7 +622,7 @@ function App() {
                   }
                 ]}
               />
-            </Space>
+            </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
               <Empty
@@ -523,43 +645,269 @@ function App() {
         width={600}
         okText="保存"
         cancelText="取消"
+        okButtonProps={{ disabled: !isValid }}
       >
         <Form layout="vertical">
           <Form.Item label="用例名称" required>
             <Input
               value={creating.name}
-              onChange={(e) => setCreating(s => ({ ...s, name: e.target.value }))}
-              placeholder="请输入用例名称"
+              onChange={(e) => setCreating({ ...creating, name: e.target.value })}
+              placeholder="请输入测试用例名称"
+              status={!creating.name.trim() ? 'error' : ''}
             />
           </Form.Item>
           <Form.Item label="用例描述">
             <TextArea
               value={creating.description}
-              onChange={(e) => setCreating(s => ({ ...s, description: e.target.value }))}
-              placeholder="请输入用例描述"
-              rows={2}
+              onChange={(e) => setCreating({ ...creating, description: e.target.value })}
+              placeholder="简要描述测试场景"
+              autoSize={{ minRows: 2, maxRows: 4 }}
             />
           </Form.Item>
-          <Form.Item label="平台选择" required>
+          <Form.Item label="平台类型" required>
             <Select
               value={creating.platform}
-              onChange={(platform) => setCreating((s) => ({ ...s, platform }))}
+              onChange={(val) => setCreating({ ...creating, platform: val })}
               options={[
-                { value: 'web', label: 'Web' },
-                { value: 'android', label: 'Android' },
+                { label: 'Web', value: 'web' },
+                { label: 'Android', value: 'android' },
+                { label: 'iOS', value: 'ios' },
               ]}
             />
           </Form.Item>
-          <Form.Item label="测试步骤" help="每行一条。支持前缀 '查询:' 或 '断言:'">
+          <Form.Item label="测试步骤（每行一步）" required tooltip="支持普通指令、'查询: xxx'、'断言: xxx'">
             <TextArea
               value={creating.stepsText}
-              onChange={(e) => setCreating(s => ({ ...s, stepsText: e.target.value }))}
-              placeholder={`打开 https://www.saucedemo.com/\n在 Username 输入 standard_user\n断言: 登录按钮存在\n查询: 页面上的价格列表`}
-              rows={8}
-              style={{ fontFamily: 'monospace' }}
+              onChange={(e) => setCreating({ ...creating, stepsText: e.target.value })}
+              placeholder={`示例：
+打开 https://www.baidu.com
+输入框输入 "MidScene"
+点击搜索按钮
+断言: 搜索结果包含官网链接`}
+              autoSize={{ minRows: 6, maxRows: 12 }}
+              status={!creating.stepsText.trim() ? 'error' : ''}
             />
           </Form.Item>
         </Form>
+      </Modal>
+
+      <Modal
+        title="批量执行"
+        open={isBatchModalOpen}
+        onCancel={() => setIsBatchModalOpen(false)}
+        width={860}
+        footer={[
+          <Button key="close" onClick={() => setIsBatchModalOpen(false)}>
+            关闭
+          </Button>,
+          <Button
+            key="run"
+            type="primary"
+            loading={batchSubmitting}
+            disabled={batchSelected.size === 0 || batchSubmitting}
+            onClick={() => {
+              Modal.confirm({
+                title: '确认批量执行',
+                content: `将执行 ${batchSelected.size} 条用例，是否继续？`,
+                okText: '执行',
+                cancelText: '取消',
+                onOk: () => batchExecute(Array.from(batchSelected)),
+              })
+            }}
+          >
+            开始执行
+          </Button>,
+        ]}
+      >
+        <Tabs
+          activeKey={batchTab}
+          onChange={(k) => setBatchTab(k as 'select' | 'status')}
+          items={[
+            {
+              key: 'select',
+              label: '用例选择',
+              children: (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    <Input
+                      value={batchSearch}
+                      onChange={(e) => setBatchSearch(e.target.value)}
+                      placeholder="按名称/描述过滤"
+                      style={{ width: 260 }}
+                    />
+                    <Select
+                      value={batchPlatform}
+                      onChange={(v) => setBatchPlatform(v)}
+                      options={[
+                        { value: 'all', label: '全部平台' },
+                        { value: 'web', label: 'Web' },
+                        { value: 'android', label: 'Android' },
+                        { value: 'ios', label: 'iOS' },
+                      ]}
+                      style={{ width: 140 }}
+                    />
+                    <Button
+                      onClick={() => {
+                        setBatchSelected((prev) => {
+                          const next = new Set(prev)
+                          for (const c of filteredBatchCases) {
+                            if (c.status !== 'running') next.add(c.id)
+                          }
+                          return next
+                        })
+                      }}
+                    >
+                      全选(过滤结果)
+                    </Button>
+                    <Button onClick={() => setBatchSelected(new Set())}>清空选择</Button>
+                    <Tag color="blue">已选 {batchSelected.size} 条</Tag>
+                  </div>
+
+                  <List
+                    dataSource={filteredBatchCases}
+                    pagination={{ pageSize: 10, showSizeChanger: false }}
+                    renderItem={(item) => {
+                      const checked = batchSelected.has(item.id)
+                      const disabled = item.status === 'running'
+                      return (
+                        <List.Item
+                          actions={[
+                            <Tag key="platform" color={item.platform === 'android' ? 'purple' : item.platform === 'ios' ? 'black' : 'geekblue'}>
+                              {item.platform.toUpperCase()}
+                            </Tag>,
+                            getStatusTag(item.status),
+                          ]}
+                        >
+                          <Space style={{ width: '100%' }}>
+                            <Checkbox
+                              checked={checked}
+                              disabled={disabled}
+                              onChange={(e) => {
+                                const nextChecked = e.target.checked
+                                setBatchSelected((prev) => {
+                                  const next = new Set(prev)
+                                  if (nextChecked) next.add(item.id)
+                                  else next.delete(item.id)
+                                  return next
+                                })
+                              }}
+                            />
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                              <Text strong style={{ maxWidth: 560, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {item.name}
+                              </Text>
+                              <Text type="secondary" style={{ maxWidth: 560, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {item.description || '-'}
+                              </Text>
+                            </div>
+                          </Space>
+                        </List.Item>
+                      )
+                    }}
+                    locale={{ emptyText: <Empty description="暂无可选用例" /> }}
+                  />
+                </div>
+              ),
+            },
+            {
+              key: 'status',
+              label: '执行状态',
+              children: currentBatchId ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    <Tag color="blue">Batch ID: {currentBatchId}</Tag>
+                    <Button
+                      onClick={() => {
+                        setCurrentBatchId(null)
+                        setBatchTab('select')
+                      }}
+                    >
+                      新建批量
+                    </Button>
+                  </div>
+                  <List
+                    dataSource={currentBatchExecutions}
+                    renderItem={(item) => {
+                      const tc = cases.find((c) => c.id === item.caseId)
+                      const canStop = item.status === 'running' || item.status === 'queued'
+                      return (
+                        <List.Item
+                          actions={[
+                            canStop ? (
+                              <Button key="stop" danger icon={<StopOutlined />} onClick={() => stopExecution(item.id)}>
+                                停止
+                              </Button>
+                            ) : null,
+                            <Button
+                              key="logs"
+                              onClick={() => setLogModal({ open: true, exeId: item.id })}
+                              disabled={!item.logs || item.logs.length === 0}
+                            >
+                              查看日志
+                            </Button>,
+                            item.reportPath ? (
+                              <Button
+                                key="report"
+                                type="link"
+                                onClick={() => window.open(getReportUrl(item.reportPath!), '_blank')}
+                              >
+                                查看报告
+                              </Button>
+                            ) : null,
+                          ]}
+                        >
+                          <List.Item.Meta
+                            avatar={getStatusTag(item.status)}
+                            title={
+                              <div style={{ display: 'flex', gap: '8px' }}>
+                                <span style={{ maxWidth: 360, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  {tc?.name || item.caseId}
+                                </span>
+                                <Tag color="default" style={{ fontSize: '12px' }}>
+                                  {item.id}
+                                </Tag>
+                              </div>
+                            }
+                            description={
+                              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <Text type="secondary">{formatTime(item.updatedAt)}</Text>
+                                {(item.status === 'running' || item.status === 'queued') && (
+                                  <Progress percent={item.progress} size="small" style={{ width: 220 }} />
+                                )}
+                                {item.errorMessage && <Text type="danger">{item.errorMessage}</Text>}
+                              </div>
+                            }
+                          />
+                        </List.Item>
+                      )
+                    }}
+                    locale={{ emptyText: <Empty description="暂无批量执行记录" /> }}
+                  />
+                </div>
+              ) : (
+                <Empty description="暂无批量执行任务" />
+              ),
+            },
+          ]}
+        />
+      </Modal>
+
+      <Modal
+        title="执行日志"
+        open={logModal.open}
+        onCancel={() => setLogModal({ open: false, exeId: null })}
+        footer={[
+          <Button key="close" onClick={() => setLogModal({ open: false, exeId: null })}>
+            关闭
+          </Button>,
+        ]}
+        width={900}
+      >
+        <Card variant="borderless" style={{ background: '#0b1020' }}>
+          <pre style={{ margin: 0, color: '#e6edf3', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+            {(logExecution?.logs || []).join('\n') || '暂无日志'}
+          </pre>
+        </Card>
       </Modal>
     </Layout>
   )

@@ -2,6 +2,7 @@
   "id": "saucedemo-optimized-flow",
   "name": "SauceDemo 购物流程 (优化版)11",
   "description": "使用优化后的自然语言指令，包含视觉特征描述，完成登录、加购、结算全流程。",
+  "platform": "web",
   "steps": [
     {
       "id": "u1766741370959-0",
@@ -45,6 +46,5 @@
     }
   ],
   "status": "error",
-  "createdAt": 1735200000000,
-  "lastRunAt": 1766989129860
+  "lastRunAt": 1767081829632
 }

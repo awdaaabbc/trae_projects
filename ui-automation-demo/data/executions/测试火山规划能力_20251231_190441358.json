@@ -1,0 +1,15 @@
+{
+  "id": "测试火山规划能力_20251231_190441358",
+  "caseId": "decff037-7af6-4243-b6f2-3856c69de468",
+  "status": "failed",
+  "progress": 100,
+  "createdAt": 1767179081358,
+  "updatedAt": 1767179086586,
+  "fileName": "测试火山规划能力_20251231_173119_decff037.json",
+  "logs": [
+    "2025-12-31T11:04:41.359Z queued",
+    "2025-12-31T11:04:41.360Z started",
+    "2025-12-31T11:04:46.586Z finished: failed"
+  ],
+  "errorMessage": "No actions found in UI-TARS response.\n\nRaw response: 1. 首先识别目标APP：屏幕右侧有红色背景、白色文字“乐读小班”的APP图标，这是需要点击的目标。  \n2. 任务第一步：点击该APP图标以启动应用，后续才能进入设置操作。  \n3. 逻辑顺序：先打开APP，再找设置入口，最后关闭授权。  \n\n下一步动作：点击屏幕上“乐读小班”APP图标（红色方形，内有白色文字，位于屏幕右侧中间位置）。\nError: No actions found in UI-TARS response.\n\nRaw response: 1. 首先识别目标APP：屏幕右侧有红色背景、白色文字“乐读小班”的APP图标，这是需要点击的目标。  \n2. 任务第一步：点击该APP图标以启动应用，后续才能进入设置操作。  \n3. 逻辑顺序：先打开APP，再找设置入口，最后关闭授权。  \n\n下一步动作：点击屏幕上“乐读小班”APP图标（红色方形，内有白色文字，位于屏幕右侧中间位置）。\n    at uiTarsPlanning (file:///Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/.pnpm/@midscene+core@1.0.4_ws@8.18.3/node_modules/@midscene/core/src/ai-model/ui-tars-planning.ts:282:11)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at Object.executor (file:///Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/.pnpm/@midscene+core@1.0.4_ws@8.18.3/node_modules/@midscene/core/src/agent/tasks.ts:270:32)\n    at TaskRunner.flush (file:///Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/.pnpm/@midscene+core@1.0.4_ws@8.18.3/node_modules/@midscene/core/src/task-runner.ts:297:25)\n    at TaskExecutor.action (file:///Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/.pnpm/@midscene+core@1.0.4_ws@8.18.3/node_modules/@midscene/core/src/agent/tasks.ts:239:22)\n    at AndroidAgent.aiAct (file:///Users/ledu/Documents/trae_projects/ui-automation-demo/node_modules/.pnpm/@midscene+core@1.0.4_ws@8.18.3/node_modules/@midscene/core/src/agent/agent.ts:893:24)\n    at file:///Users/ledu/Documents/trae_projects/ui-automation-demo/server/runner.android.ts:149:21\n    at runTestCase (file:///Users/ledu/Documents/trae_projects/ui-automation-demo/server/runner.android.ts:153:7)\n    at runJob (file:///Users/ledu/Documents/trae_projects/ui-automation-demo/server/index.ts:148:20)"
+}

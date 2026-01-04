@@ -1,0 +1,16 @@
+{
+  "id": "decff037-7af6-4243-b6f2-3856c69de468",
+  "name": "测试火山规划能力",
+  "description": "",
+  "platform": "android",
+  "steps": [
+    {
+      "id": "u1767173486245-0",
+      "type": "action",
+      "action": "点击带有乐读小班图片的app，在设置中关闭我的个人信息授权"
+    }
+  ],
+  "status": "done",
+  "lastRunAt": 1767179382913,
+  "lastReportPath": "测试火山规划能力_20251231_190756384.html"
+}

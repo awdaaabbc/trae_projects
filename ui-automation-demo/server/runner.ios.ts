@@ -71,6 +71,19 @@ export async function runTestCase(
 
     const reportId = executionId
 
+    const getFinalReportPath = () => {
+      const expectedReportPath = path.join(reportRoot, `${reportId}.html`)
+      if (fs.existsSync(expectedReportPath)) {
+        return `${reportId}.html`
+      }
+      const files = fs
+        .readdirSync(reportRoot)
+        .filter((f) => f.endsWith('.html'))
+        .map((f) => ({ name: f, time: fs.statSync(path.join(reportRoot, f)).mtime.getTime() }))
+        .sort((a, b) => b.time - a.time)
+      return files.length > 0 ? files[0].name : undefined
+    }
+
     if (!hasModel) {
       updateCallback({ status: 'running', progress: 50 })
 
@@ -165,24 +178,34 @@ export async function runTestCase(
 
     updateCallback({ progress: 100 })
 
-    const expectedReportPath = path.join(reportRoot, `${reportId}.html`)
-    let finalReportPath = `${reportId}.html`
-
-    if (!fs.existsSync(expectedReportPath)) {
-      const files = fs
-        .readdirSync(reportRoot)
-        .filter((f) => f.endsWith('.html'))
-        .map((f) => ({ name: f, time: fs.statSync(path.join(reportRoot, f)).mtime.getTime() }))
-        .sort((a, b) => b.time - a.time)
-      if (files.length > 0) {
-        finalReportPath = files[0].name
-      }
-    }
-
-    return { status: 'success', reportPath: finalReportPath }
+    return { status: 'success', reportPath: getFinalReportPath() }
   } catch (e: unknown) {
     console.error('Execution failed:', e)
-    return { status: 'failed', errorMessage: e instanceof Error ? e.message : String(e) }
+    // Even on failure, try to find the report path
+    let reportPath: string | undefined
+    try {
+      const reportRoot = process.env.UI_AUTOMATION_REPORT_DIR
+        ? path.resolve(process.env.UI_AUTOMATION_REPORT_DIR)
+        : path.resolve(process.cwd(), 'midscene_run', 'report')
+      if (fs.existsSync(reportRoot)) {
+        const expectedReportPath = path.join(reportRoot, `${executionId}.html`)
+        if (fs.existsSync(expectedReportPath)) {
+          reportPath = `${executionId}.html`
+        } else {
+          const files = fs
+            .readdirSync(reportRoot)
+            .filter((f) => f.endsWith('.html'))
+            .map((f) => ({ name: f, time: fs.statSync(path.join(reportRoot, f)).mtime.getTime() }))
+            .sort((a, b) => b.time - a.time)
+          if (files.length > 0) {
+            reportPath = files[0].name
+          }
+        }
+      }
+    } catch (reportError) {
+      console.warn('Failed to resolve report path after execution error:', reportError)
+    }
+    return { status: 'failed', errorMessage: e instanceof Error ? e.message : String(e), reportPath }
   } finally {
     runningExecutions.delete(executionId)
     if (cleanup) await cleanup().catch(() => {})

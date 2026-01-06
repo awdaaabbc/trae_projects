@@ -271,14 +271,33 @@ app.put('/api/testcases/:id', (req: Request, res: Response) => {
 })
 
 // Executions APIs
-app.get('/api/executions', (_req: Request, res: Response) => {
+app.get('/api/executions', (req: Request, res: Response) => {
   try {
-    res.json({ data: Storage.listExecutions() })
+    const page = parseInt(req.query.page as string) || 1
+    const pageSize = parseInt(req.query.pageSize as string) || 1000 // Default high limit for backward compatibility
+    const caseId = req.query.caseId as string | undefined
+    const offset = (page - 1) * pageSize
+    
+    const data = Storage.listExecutions(pageSize, offset, caseId)
+    const total = Storage.countExecutions(caseId)
+    
+    res.json({ 
+      data, 
+      total,
+      page,
+      pageSize
+    })
   } catch (err) {
     console.error('Failed to list executions:', err)
     const msg = err instanceof Error ? err.message : String(err)
     res.status(500).json({ error: `获取执行列表失败: ${msg}` })
   }
+})
+
+app.get('/api/executions/:id', (req: Request, res: Response) => {
+  const exe = Storage.getExecution(req.params.id)
+  if (!exe) return res.status(404).json({ error: '未找到执行记录' })
+  res.json({ data: exe })
 })
 
 app.post('/api/execute/:id', async (req: Request, res: Response) => {

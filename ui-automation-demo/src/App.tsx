@@ -127,6 +127,9 @@ function formatTime(ts?: number) {
 function App() {
   const [cases, setCases] = useState<TestCase[]>([])
   const [executions, setExecutions] = useState<Execution[]>([])
+  const [totalExecutions, setTotalExecutions] = useState(0)
+  const [executionPage, setExecutionPage] = useState(1)
+  const [executionPageSize, setExecutionPageSize] = useState(10)
   const [selectedCase, setSelectedCase] = useState<string | null>(null)
   
   // Form state
@@ -171,25 +174,48 @@ function App() {
     }
   }
 
-  // Initial Data Load & WebSocket
-  async function refreshData() {
+  // Data fetching
+  async function refreshData(page = executionPage, pageSize = executionPageSize) {
     try {
-      const [cs, ex] = await Promise.all([
-        api<TestCase[]>('/api/testcases'),
-        api<Execution[]>('/api/executions'),
-      ])
-      setCases(cs.data)
-      setExecutions(ex.data)
-      fetchAgents() // Refresh agents as well
+      // Always fetch cases to update status
+      const csResponse = await api<TestCase[]>('/api/testcases')
+      setCases(csResponse.data)
+
+      // Only fetch executions if a case is selected
+      if (selectedCase) {
+        const exResponse = await fetch(`/api/executions?page=${page}&pageSize=${pageSize}&caseId=${selectedCase}`)
+        if (!exResponse.ok) throw new Error('Failed to fetch executions')
+        const exData = await exResponse.json()
+        
+        setExecutions(exData.data)
+        setTotalExecutions(exData.total)
+      } else {
+        // If no case selected, clear executions or keep empty
+        setExecutions([])
+        setTotalExecutions(0)
+      }
+      
+      fetchAgents() 
     } catch (e) {
       console.error('Failed to refresh data', e)
     }
   }
 
+  // Initial load
   useEffect(() => {
     refreshData()
+    // Poll every 5s
     const interval = setInterval(() => {
-      refreshData()
+      // Don't refresh executions via polling if pagination is not on page 1
+      // or maybe we should? But standard pattern is usually manual refresh or live update for current page.
+      // For simplicity, let's refresh, but we need to use current state values
+      // However, interval closure captures initial state.
+      // We need to use a ref or dependency. But dependency causes re-subscribe.
+      // So we'll skip polling refresh for executions inside this effect, 
+      // relying on WebSocket for status updates, and cases list refresh.
+      // Actually, let's just refresh cases.
+      api<TestCase[]>('/api/testcases').then(res => setCases(res.data)).catch(console.error)
+      fetchAgents()
     }, 5000)
     const ws = new WebSocket(
       `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`,
@@ -222,6 +248,17 @@ function App() {
     }
   }, [])
 
+  // When selected case changes, reset pagination and fetch its executions
+  useEffect(() => {
+    if (selectedCase) {
+      setExecutionPage(1)
+      refreshData(1, executionPageSize)
+    } else {
+      setExecutions([])
+      setTotalExecutions(0)
+    }
+  }, [selectedCase]) // Add dependency on selectedCase only, executionPageSize is stable enough or we don't want to re-trigger if size changes alone (that's handled by onChange)
+
   // Derived state
   const selected = useMemo(
     () => cases.find((c) => c.id === selectedCase) || null,
@@ -246,10 +283,22 @@ function App() {
       .sort((a, b) => b.createdAt - a.createdAt)
   }, [executions, currentBatchId])
 
-  const logExecution = useMemo(() => {
-    if (!logModal.exeId) return null
-    return executions.find((e) => e.id === logModal.exeId) || null
-  }, [executions, logModal.exeId])
+  const [logExecution, setLogExecution] = useState<Execution | null>(null)
+
+  useEffect(() => {
+    if (!logModal.exeId) {
+      setLogExecution(null)
+      return
+    }
+    
+    // Fetch full details including logs
+    api<Execution>(`/api/executions/${logModal.exeId}`)
+      .then(res => setLogExecution(res.data))
+      .catch(err => {
+        console.error('Failed to fetch execution details', err)
+        messageApi.error('无法加载日志详情')
+      })
+  }, [logModal.exeId])
 
   // Sync selection to form state
   useEffect(() => {
@@ -602,7 +651,13 @@ function App() {
                       .map(agent => (
                         <Select.Option key={agent.id} value={agent.id} disabled={agent.status !== 'idle'}>
                           <Space>
-                            {agent.platform === 'android' ? <AndroidOutlined /> : <AppleOutlined />}
+                            {agent.platform === 'android' ? (
+                            <AndroidOutlined />
+                          ) : agent.platform === 'ios' ? (
+                            <AppleOutlined />
+                          ) : (
+                            <GlobalOutlined />
+                          )}
                             {agent.deviceName}
                             <Text type="secondary" style={{ fontSize: 12 }}>({agent.id})</Text>
                             {agent.status !== 'idle' && <Tag color="warning">忙碌</Tag>}
@@ -612,7 +667,13 @@ function App() {
                   </Select>
                   <div style={{ marginTop: 8 }}>
                     <Text type="secondary" style={{ fontSize: 12 }}>
-                      如果不选择特定设备，系统将自动分配给空闲的 {selected?.platform === 'android' ? 'Android' : 'iOS'} 设备。
+                      如果不选择特定设备，系统将自动分配给空闲的{' '}
+                      {selected?.platform === 'android'
+                        ? 'Android'
+                        : selected?.platform === 'ios'
+                          ? 'iOS'
+                          : 'Web'}{' '}
+                      设备。
                     </Text>
                   </div>
                 </div>
@@ -646,10 +707,16 @@ function App() {
                     label: <span><HistoryOutlined /> 执行记录</span>,
                     children: (
                       <List
-                        dataSource={executions.filter(e => e.caseId === selected.id)}
+                        dataSource={executions}
                         renderItem={item => (
                           <List.Item
                             actions={[
+                              <Button
+                                key="logs"
+                                onClick={() => setLogModal({ open: true, exeId: item.id })}
+                              >
+                                查看日志
+                              </Button>,
                               item.reportPath ? (
                                 <Button type="link" onClick={() => window.open(getReportUrl(item.reportPath!), '_blank')}>
                                   查看报告
@@ -689,6 +756,18 @@ function App() {
                           </List.Item>
                         )}
                         locale={{ emptyText: <Empty description="暂无执行记录" /> }}
+                        pagination={{
+                          current: executionPage,
+                          pageSize: executionPageSize,
+                          total: totalExecutions,
+                          onChange: (page, pageSize) => {
+                            setExecutionPage(page)
+                            setExecutionPageSize(pageSize)
+                            refreshData(page, pageSize)
+                          },
+                          showSizeChanger: true,
+                          showTotal: (total) => `共 ${total} 条记录`
+                        }}
                       />
                     )
                   }
@@ -913,7 +992,7 @@ function App() {
                             <Button
                               key="logs"
                               onClick={() => setLogModal({ open: true, exeId: item.id })}
-                              disabled={!item.logs || item.logs.length === 0}
+                              // disabled={!item.logs || item.logs.length === 0} // Logs are now fetched on demand
                             >
                               查看日志
                             </Button>,

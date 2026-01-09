@@ -57,20 +57,20 @@ npx playwright install
 
 ### 4. 启动服务 (开发模式)
 
-推荐使用一键启动脚本，同时启动前后端：
+推荐使用一键启动脚本，同时启动前后端并自动处理端口冲突：
 
 ```bash
-./start.sh
+# 首次运行需添加执行权限
+chmod +x start-all.sh
+
+./start-all.sh
 ```
 
 或者手动分别启动：
 
 ```bash
-# 启动后端服务
-npm run dev:server
-
-# 启动前端页面
-npm run dev:client
+# 同时启动前后端
+npm run dev
 ```
 
 访问地址：`http://localhost:5173`

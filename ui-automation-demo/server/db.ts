@@ -51,6 +51,18 @@ export function initDB() {
     CREATE INDEX IF NOT EXISTS idx_executions_case_id ON executions(case_id);
     CREATE INDEX IF NOT EXISTS idx_executions_created_at ON executions(created_at);
   `);
+
+  // Migration: Add context column to test_cases if it doesn't exist
+  try {
+    const columns = db.pragma('table_info(test_cases)') as any[];
+    const hasContext = columns.some(col => col.name === 'context');
+    if (!hasContext) {
+      db.exec('ALTER TABLE test_cases ADD COLUMN context TEXT');
+      console.log('[DB] Added context column to test_cases');
+    }
+  } catch (err) {
+    console.error('[DB] Failed to migrate test_cases schema:', err);
+  }
 }
 
 export default db;

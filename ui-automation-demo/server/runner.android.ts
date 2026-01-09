@@ -1,6 +1,34 @@
 import path from 'node:path'
 import fs from 'node:fs'
+import { exec } from 'node:child_process'
+import { promisify } from 'node:util'
 import type { TestCase, Execution } from './types.js'
+
+const execAsync = promisify(exec)
+
+async function inputViaADBKeyboard(udid: string, text: string) {
+  console.log(`[Android Runner] Attempting to input via ADBKeyBoard: "${text}"`)
+  try {
+    // 1. Check if ADBKeyBoard is installed
+    const { stdout: listPackages } = await execAsync(`adb -s ${udid} shell pm list packages com.android.adbkeyboard`)
+    if (!listPackages.includes('com.android.adbkeyboard')) {
+      throw new Error('ADBKeyBoard is not installed. Please install it to use [ADB] input mode. (https://github.com/senzhk/ADBKeyBoard)')
+    }
+
+    // 2. Enable and Set IME
+    await execAsync(`adb -s ${udid} shell ime enable com.android.adbkeyboard/.AdbIME`)
+    await execAsync(`adb -s ${udid} shell ime set com.android.adbkeyboard/.AdbIME`)
+
+    // 3. Input Text (Base64 for safety)
+    const b64 = Buffer.from(text).toString('base64')
+    await execAsync(`adb -s ${udid} shell am broadcast -a ADB_INPUT_B64 --es msg "${b64}"`)
+    
+    console.log('[Android Runner] ADBKeyBoard input successful')
+  } catch (err) {
+    console.error('[Android Runner] ADBKeyBoard input failed:', err)
+    throw err
+  }
+}
 
 export interface RunResult {
   status: 'success' | 'failed';
@@ -13,6 +41,11 @@ type AndroidModule = {
   AndroidDevice: new (udid: string) => {
     connect: () => Promise<void>
     destroy: () => Promise<void>
+    scrollDown: (distance?: number) => Promise<void>
+    scrollUp: (distance?: number) => Promise<void>
+    scrollLeft: (distance?: number) => Promise<void>
+    scrollRight: (distance?: number) => Promise<void>
+    scroll: (deltaX: number, deltaY: number, duration?: number) => Promise<void>
   }
   AndroidAgent: new (
     device: unknown,
@@ -21,6 +54,7 @@ type AndroidModule = {
     aiAct: (instruction: string) => Promise<unknown>
     aiQuery: (instruction: string) => Promise<unknown>
     aiAssert: (instruction: string) => Promise<unknown>
+    aiInput: (options: { value: string }) => Promise<unknown>
   }
 }
 
@@ -137,6 +171,20 @@ export async function runTestCase(
       reportFileName: reportId,
     })
 
+    // Monkey patch aiInput to force ADBKeyBoard usage globally
+    // This catches inputs triggered by aiAct (e.g. "Enter 6.68") that we don't intercept manually
+    const originalAiInput = agent.aiInput.bind(agent)
+    agent.aiInput = async (options: { value: string }) => {
+      console.log(`[Android Runner] Intercepted aiInput call for value: "${options.value}"`)
+      try {
+        await inputViaADBKeyboard(devices[0].udid, options.value)
+        return { status: 'success', description: 'Executed input via ADBKeyBoard (Global Patch)' }
+      } catch (adbError) {
+        console.warn('[Android Runner] ADBKeyBoard input failed in global patch, falling back to original aiInput:', adbError)
+        return originalAiInput(options)
+      }
+    }
+
     updateCallback({ status: 'running', progress: 0 })
     const totalSteps = testCase.steps.length
 
@@ -147,7 +195,7 @@ export async function runTestCase(
       const progress = Math.round((i / totalSteps) * 100)
       updateCallback({ progress })
 
-      const stepTimeout = 120000
+      const stepTimeout = process.env.UI_AUTOMATION_STEP_TIMEOUT ? Number(process.env.UI_AUTOMATION_STEP_TIMEOUT) : 300000
       const stepPromise = (async () => {
         if (step.type === 'query') {
           const res = await agent.aiQuery(step.action)
@@ -159,6 +207,87 @@ export async function runTestCase(
           console.log('[MidScene Assert Result]', JSON.stringify(res, null, 2))
           return
         }
+
+        // Handle explicit input type or natural language input instruction
+        // Example: "输入：输入5" -> "Input: Input 5"
+        // Updated Regex: Allow optional colon and optional space, e.g. "输入123", "input 123"
+        const inputMatch = step.action.match(/^(?:输入|input)(?:[:：]\s*|\s*)(.+)$/i)
+        if (step.type === 'input' || inputMatch) {
+          let value = inputMatch ? inputMatch[1] : step.action
+          
+          // Check for [ADB] prefix (optional now, but kept for compatibility)
+          const adbMatch = value.match(/^\[ADB\]\s*(.+)$/i)
+          if (adbMatch) {
+             value = adbMatch[1]
+          }
+
+          // Default to ADBKeyBoard for all inputs as requested
+          try {
+             await inputViaADBKeyboard(devices[0].udid, value)
+             console.log('[MidScene Input Result] { status: "success", description: "Executed input via ADBKeyBoard" }')
+             return
+          } catch (adbError) {
+             console.warn('[Android Runner] ADBKeyBoard input failed, falling back to aiInput:', adbError)
+             // Fall through to aiInput
+          }
+
+          console.log(`[Android Runner] Executing aiInput with value: "${value}"`)
+          const res = await agent.aiInput({ value })
+          console.log('[MidScene Input Result]', JSON.stringify(res, null, 2))
+          return
+        }
+
+        // Handle scroll/swipe commands using MidScene's native device methods
+        // Supports: "scroll down", "swipe left", "next page", "scroll down 500", etc.
+        const scrollAction = step.action.toLowerCase()
+        const isScroll = /scroll|swipe|滑动|翻页|page/i.test(scrollAction)
+        
+        if (isScroll) {
+           let direction = ''
+           let distance: number | undefined = undefined
+           
+           // Extract parameters
+           // Match "scroll down 500" or "swipe left 0.5"
+           const paramMatch = step.action.match(/(?:scroll|swipe|滑动)\s*(up|down|left|right|上|下|左|右)\s*(\d+(?:\.\d+)?)?/i)
+           if (paramMatch) {
+              const dir = paramMatch[1].toLowerCase()
+              const val = paramMatch[2]
+              if (val) distance = Number(val)
+              
+              if (['up', '上'].includes(dir)) direction = 'up'
+              else if (['down', '下'].includes(dir)) direction = 'down'
+              else if (['left', '左'].includes(dir)) direction = 'left'
+              else if (['right', '右'].includes(dir)) direction = 'right'
+           } else {
+              // Handle aliases
+              if (/next page|下一页|left/i.test(scrollAction)) direction = 'right' // Swipe Left -> Scroll Right
+              else if (/prev page|previous page|上一页|right/i.test(scrollAction)) direction = 'left' // Swipe Right -> Scroll Left
+              else if (/down|bottom/i.test(scrollAction)) direction = 'down'
+              else if (/up|top/i.test(scrollAction)) direction = 'up'
+           }
+
+           if (direction) {
+              console.log(`[Android Runner] Executing native scroll/swipe: direction=${direction}, distance=${distance ?? 'default'}`)
+              try {
+                if (direction === 'down') await device.scrollDown(distance)
+                else if (direction === 'up') await device.scrollUp(distance)
+                else if (direction === 'right') await device.scrollRight(distance) // Scroll to right (content moves left)
+                else if (direction === 'left') await device.scrollLeft(distance)   // Scroll to left (content moves right)
+                
+                // Force a context refresh after scroll
+                try {
+                  await agent.aiQuery('check page status')
+                } catch {}
+
+                console.log(`[MidScene Action Result] { status: "success", description: "Executed native scroll ${direction}" }`)
+                return
+              } catch (e) {
+                console.error('[Android Runner] Native scroll failed:', e)
+                // Fallback to aiAct if native scroll fails
+              }
+           }
+        }
+
         const res = await agent.aiAct(step.action)
         console.log('[MidScene Action Result]', JSON.stringify(res, null, 2))
       })()
@@ -166,7 +295,8 @@ export async function runTestCase(
       await Promise.race([
         stepPromise,
         new Promise((_, reject) => {
-          const timer = setTimeout(() => reject(new Error('Step timeout (2min)')), stepTimeout)
+          const timeoutMinutes = (stepTimeout / 60000).toFixed(1)
+          const timer = setTimeout(() => reject(new Error(`Step timeout (${timeoutMinutes}min)`)), stepTimeout)
           signal.addEventListener('abort', () => {
             clearTimeout(timer)
             reject(new Error('Execution cancelled'))
@@ -204,7 +334,7 @@ export async function runTestCase(
     } catch (reportError) {
       console.warn('Failed to resolve report path after execution error:', reportError)
     }
-    return { status: 'failed', errorMessage: e instanceof Error ? e.message : String(e), reportPath }
+    return { status: 'failed', errorMessage: e instanceof Error ? `${e.message}\n${e.stack || ''}` : String(e), reportPath }
   } finally {
     runningExecutions.delete(executionId)
     if (cleanup) await cleanup().catch(() => {})

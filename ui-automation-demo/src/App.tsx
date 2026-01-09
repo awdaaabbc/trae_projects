@@ -44,15 +44,16 @@ const { Title, Text } = Typography
 const { TextArea } = Input
 
 type TestStep = {
-  id: string
-  type?: 'action' | 'query' | 'assert'
-  action: string
-}
+    id: string
+    type?: 'action' | 'query' | 'assert' | 'input'
+    action: string
+  }
 type TestCase = {
   id: string
   name: string
   description?: string
   platform: 'web' | 'android' | 'ios'
+  context?: string
   steps: TestStep[]
   status: 'idle' | 'running' | 'done' | 'error'
   lastRunAt?: number
@@ -138,6 +139,7 @@ function App() {
     name: '',
     description: '',
     platform: 'web' as 'web' | 'android' | 'ios',
+    context: '',
     stepsText: '',
   })
   
@@ -172,6 +174,33 @@ function App() {
     } catch (e) {
       console.error('Failed to fetch agents', e)
     }
+  }
+
+  // Timer for updating elapsed times
+  const [now, setNow] = useState(Date.now())
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(timer)
+  }, [])
+
+  function getDurationDisplay(start: number, end?: number) {
+    const duration = (end || now) - start
+    const sec = Math.floor(duration / 1000)
+    const min = Math.floor(sec / 60)
+    const s = sec % 60
+    return `${min}m ${s}s`
+  }
+
+  function getEstimatedRemaining(start: number, progress: number) {
+    if (progress <= 0 || progress >= 100) return null
+    const elapsed = now - start
+    const totalEst = (elapsed / progress) * 100
+    const remaining = totalEst - elapsed
+    if (remaining < 0) return '0s'
+    const sec = Math.floor(remaining / 1000)
+    const min = Math.floor(sec / 60)
+    const s = sec % 60
+    return `${min}m ${s}s`
   }
 
   // Data fetching
@@ -311,9 +340,11 @@ function App() {
           name: selected.name,
           description: selected.description || '',
           platform: selected.platform || 'web',
+          context: selected.context || '',
           stepsText: selected.steps.map((s) => {
             if (s.type === 'query') return `查询: ${s.action}`
             if (s.type === 'assert') return `断言: ${s.action}`
+            if (s.type === 'input') return `输入: ${s.action}`
             return s.action
           }).join('\n'),
         })
@@ -322,7 +353,7 @@ function App() {
       // If no selection, reset form only if it has an ID (meaning it was editing something)
       // If it has no ID, user might be typing a new case, so don't clear blindly unless we explicitly want to
       if (creating.id) {
-        setCreating({ id: '', name: '', description: '', platform: 'web', stepsText: '' })
+        setCreating({ id: '', name: '', description: '', platform: 'web', context: '', stepsText: '' })
       }
     }
   }, [selected, creating.id])
@@ -343,6 +374,9 @@ function App() {
             action = s.substring(3).trim()
           } else if (s.startsWith('断言:') || s.startsWith('断言：')) {
             type = 'assert'
+            action = s.substring(3).trim()
+          } else if (s.startsWith('输入:') || s.startsWith('输入：')) {
+            type = 'input'
             action = s.substring(3).trim()
           }
 
@@ -368,6 +402,7 @@ function App() {
                   name: creating.name,
                   description: creating.description,
                   platform: creating.platform,
+                  context: creating.context,
                   steps,
                 }
               : c,
@@ -489,7 +524,7 @@ function App() {
   // UI Handlers
   const handleCreateClick = () => {
     setSelectedCase(null)
-    setCreating({ id: '', name: '', description: '', platform: 'web', stepsText: '' })
+    setCreating({ id: '', name: '', description: '', platform: 'web', context: '', stepsText: '' })
     setIsModalOpen(true)
   }
 
@@ -694,6 +729,7 @@ function App() {
                                   <Badge count={index + 1} style={{ backgroundColor: '#1890ff' }} />
                                   {item.type === 'query' && <Tag color="blue">查询</Tag>}
                                   {item.type === 'assert' && <Tag color="orange">断言</Tag>}
+                                  {item.type === 'input' && <Tag color="cyan">输入</Tag>}
                                   <Text>{item.action}</Text>
                                 </div>
                               </List.Item>
@@ -708,9 +744,23 @@ function App() {
                     children: (
                       <List
                         dataSource={executions}
-                        renderItem={item => (
+                        renderItem={item => {
+                          const isRunning = item.status === 'running'
+                          const remaining = isRunning ? getEstimatedRemaining(item.createdAt, item.progress) : null
+                          const duration = getDurationDisplay(item.createdAt, item.updatedAt && item.status !== 'running' && item.status !== 'queued' ? item.updatedAt : undefined)
+                          
+                          return (
                           <List.Item
                             actions={[
+                              item.status === 'failed' || item.status === 'success' ? (
+                                <Button 
+                                  key="rerun" 
+                                  icon={<SyncOutlined />} 
+                                  onClick={() => executeCase(item.caseId)}
+                                >
+                                  重试
+                                </Button>
+                              ) : null,
                               <Button
                                 key="logs"
                                 onClick={() => setLogModal({ open: true, exeId: item.id })}
@@ -737,24 +787,48 @@ function App() {
                                 </div>
                               }
                               description={
-                                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                  <Space>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                  <Space split="|">
                                     <Text type="secondary" style={{ fontSize: 12 }}>
-                                      {formatTime(item.createdAt)}
+                                      开始: {formatTime(item.createdAt)}
                                     </Text>
+                                    <Text type="secondary" style={{ fontSize: 12 }}>
+                                      耗时: {duration}
+                                    </Text>
+                                    {remaining && (
+                                      <Text type="secondary" style={{ fontSize: 12 }}>
+                                        预计剩余: {remaining}
+                                      </Text>
+                                    )}
                                     {item.agentName && (
                                       <Tag icon={<GlobalOutlined />} color="blue">
                                         {item.agentName}
                                       </Tag>
                                     )}
                                   </Space>
-                                  {item.status === 'running' && <Progress percent={item.progress} size="small" style={{ width: 140 }} />}
-                                  {item.errorMessage && <Text type="danger">{item.errorMessage}</Text>}
+                                  {isRunning && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                      <Progress percent={item.progress} size="small" style={{ width: 140, margin: 0 }} />
+                                      <Text type="secondary" style={{ fontSize: 12 }}>{item.progress}%</Text>
+                                    </div>
+                                  )}
+                                  {item.errorMessage && (
+                                    <div style={{ background: '#fff2f0', border: '1px solid #ffccc7', padding: '8px', borderRadius: '4px', marginTop: '4px' }}>
+                                      <Text type="danger" strong>
+                                        <CloseCircleOutlined /> 执行失败
+                                      </Text>
+                                      <div style={{ marginTop: 4, maxHeight: 100, overflowY: 'auto' }}>
+                                        <Text type="danger" style={{ fontSize: 12, fontFamily: 'monospace' }}>
+                                          {item.errorMessage}
+                                        </Text>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               }
                             />
                           </List.Item>
-                        )}
+                        )}}
                         locale={{ emptyText: <Empty description="暂无执行记录" /> }}
                         pagination={{
                           current: executionPage,
@@ -826,13 +900,21 @@ function App() {
               ]}
             />
           </Form.Item>
+          <Form.Item label="AI Context (可选)" tooltip="为 AI 提供的额外上下文信息">
+            <TextArea
+              value={creating.context}
+              onChange={(e) => setCreating({ ...creating, context: e.target.value })}
+              placeholder="例如：这是一个电商网站的登录页面..."
+              autoSize={{ minRows: 2, maxRows: 4 }}
+            />
+          </Form.Item>
           <Form.Item label="测试步骤（每行一步）" required tooltip="支持普通指令、'查询: xxx'、'断言: xxx'">
             <TextArea
               value={creating.stepsText}
               onChange={(e) => setCreating({ ...creating, stepsText: e.target.value })}
               placeholder={`示例：
 打开 https://www.baidu.com
-输入框输入 "MidScene"
+输入: MidScene
 点击搜索按钮
 断言: 搜索结果包含官网链接`}
               autoSize={{ minRows: 6, maxRows: 12 }}
@@ -981,6 +1063,10 @@ function App() {
                     renderItem={(item) => {
                       const tc = cases.find((c) => c.id === item.caseId)
                       const canStop = item.status === 'running' || item.status === 'queued'
+                      const isRunning = item.status === 'running'
+                      const remaining = isRunning ? getEstimatedRemaining(item.createdAt, item.progress) : null
+                      const duration = getDurationDisplay(item.createdAt, item.updatedAt && !canStop ? item.updatedAt : undefined)
+
                       return (
                         <List.Item
                           actions={[
@@ -1020,12 +1106,38 @@ function App() {
                               </div>
                             }
                             description={
-                              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                <Text type="secondary">{formatTime(item.updatedAt)}</Text>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                <Space split="|">
+                                  <Text type="secondary" style={{ fontSize: 12 }}>
+                                    开始: {formatTime(item.createdAt)}
+                                  </Text>
+                                  <Text type="secondary" style={{ fontSize: 12 }}>
+                                    耗时: {duration}
+                                  </Text>
+                                  {remaining && (
+                                    <Text type="secondary" style={{ fontSize: 12 }}>
+                                      预计剩余: {remaining}
+                                    </Text>
+                                  )}
+                                </Space>
                                 {(item.status === 'running' || item.status === 'queued') && (
-                                  <Progress percent={item.progress} size="small" style={{ width: 220 }} />
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <Progress percent={item.progress} size="small" style={{ width: 220, margin: 0 }} />
+                                    <Text type="secondary" style={{ fontSize: 12 }}>{item.progress}%</Text>
+                                  </div>
                                 )}
-                                {item.errorMessage && <Text type="danger">{item.errorMessage}</Text>}
+                                {item.errorMessage && (
+                                  <div style={{ background: '#fff2f0', border: '1px solid #ffccc7', padding: '8px', borderRadius: '4px', marginTop: '4px' }}>
+                                    <Text type="danger" strong>
+                                      <CloseCircleOutlined /> 执行失败
+                                    </Text>
+                                    <div style={{ marginTop: 4, maxHeight: 100, overflowY: 'auto' }}>
+                                      <Text type="danger" style={{ fontSize: 12, fontFamily: 'monospace' }}>
+                                        {item.errorMessage}
+                                      </Text>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             }
                           />

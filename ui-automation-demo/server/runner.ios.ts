@@ -148,7 +148,7 @@ export async function runTestCase(
       const progress = Math.round((i / totalSteps) * 100)
       updateCallback({ progress })
 
-      const stepTimeout = 120000
+      const stepTimeout = process.env.UI_AUTOMATION_STEP_TIMEOUT ? Number(process.env.UI_AUTOMATION_STEP_TIMEOUT) : 300000
       const stepPromise = (async () => {
         if (step.type === 'query') {
           const res = await agent.aiQuery(step.action)
@@ -167,7 +167,8 @@ export async function runTestCase(
       await Promise.race([
         stepPromise,
         new Promise((_, reject) => {
-          const timer = setTimeout(() => reject(new Error('Step timeout (2min)')), stepTimeout)
+          const timeoutMinutes = (stepTimeout / 60000).toFixed(1)
+          const timer = setTimeout(() => reject(new Error(`Step timeout (${timeoutMinutes}min)`)), stepTimeout)
           signal.addEventListener('abort', () => {
             clearTimeout(timer)
             reject(new Error('Execution cancelled'))
@@ -205,7 +206,7 @@ export async function runTestCase(
     } catch (reportError) {
       console.warn('Failed to resolve report path after execution error:', reportError)
     }
-    return { status: 'failed', errorMessage: e instanceof Error ? e.message : String(e), reportPath }
+    return { status: 'failed', errorMessage: e instanceof Error ? `${e.message}\n${e.stack || ''}` : String(e), reportPath }
   } finally {
     runningExecutions.delete(executionId)
     if (cleanup) await cleanup().catch(() => {})

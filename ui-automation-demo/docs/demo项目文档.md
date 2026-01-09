@@ -28,7 +28,7 @@
 
 主要目标：
 
-- **AI 驱动**：使用自然语言（Action/Query/Assert）编写测试步骤。
+- **AI 驱动**：使用自然语言（Action/Query/Assert/Input）编写测试步骤。
 - **全平台支持**：Web (Playwright), Android (ADB), iOS (XCUITest)。
 - **分布式架构**：支持 Server-Agent 架构，解决 Docker/云环境无法直接连接本地真机的问题。
 - **实时监控**：WebSocket 实时推送任务状态与日志。
@@ -179,7 +179,26 @@ ui-automation-demo/
 
 ---
 
-## 7. 附录
+## 7. 功能特性指南
+
+### 7.1 Android 中文输入增强
+
+默认情况下，Midscene Android 使用 YADB 工具通过剪切板注入中文字符。如果您的测试环境或设备禁用了剪切板，可以通过以下方式使用 **ADBKeyBoard** 进行输入。
+
+#### 前置条件
+需要安装 `ADBKeyBoard.apk`。项目提供了辅助脚本进行检测和安装：
+```bash
+npx tsx scripts/install-adb-keyboard.ts
+```
+
+#### 使用方法
+在测试用例的输入步骤中，使用 `[ADB]` 前缀：
+- **自然语言指令**: `输入：[ADB]你好世界`
+- **代码实现**: 底层会自动切换到 ADBKeyBoard 输入法并使用 Base64 广播发送文本，绕过剪切板限制。
+
+---
+
+## 8. 附录
 
 - [MidScene 文档](https://midscenejs.com)
 - [Playwright 文档](https://playwright.dev)

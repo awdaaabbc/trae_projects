@@ -106,6 +106,11 @@ export async function runTestCase(
     } as unknown as ConstructorParameters<typeof PlaywrightAgent>[1]
     const agent = new PlaywrightAgent(page, agentOpts)
 
+    if (testCase.context) {
+      console.log(`[Runner] Setting AI Context: ${testCase.context}`)
+      await agent.setAIActContext(testCase.context)
+    }
+
     updateCallback({ status: 'running', progress: 0 })
     const totalSteps = testCase.steps.length
     
@@ -119,8 +124,8 @@ export async function runTestCase(
         try {
             console.log(`Executing step ${i + 1}/${totalSteps}: ${step.type || 'action'} - ${step.action}`)
             
-            // Timeout wrapper for each step (e.g., 2 minutes)
-            const stepTimeout = 120000
+            // Timeout wrapper for each step
+            const stepTimeout = process.env.UI_AUTOMATION_STEP_TIMEOUT ? Number(process.env.UI_AUTOMATION_STEP_TIMEOUT) : 300000
             const stepPromise = (async () => {
                if (step.type === 'query') {
                    const res = await agent.aiQuery(step.action)
@@ -137,7 +142,8 @@ export async function runTestCase(
             await Promise.race([
                 stepPromise,
                 new Promise((_, reject) => {
-                    const timer = setTimeout(() => reject(new Error('Step timeout (2min)')), stepTimeout)
+                    const timeoutMinutes = (stepTimeout / 60000).toFixed(1)
+                    const timer = setTimeout(() => reject(new Error(`Step timeout (${timeoutMinutes}min)`)), stepTimeout)
                     signal.addEventListener('abort', () => {
                         clearTimeout(timer)
                         reject(new Error('Execution cancelled'))
@@ -186,7 +192,7 @@ export async function runTestCase(
 
     return { 
         status: 'failed', 
-        errorMessage: e instanceof Error ? e.message : String(e),
+        errorMessage: e instanceof Error ? `${e.message}\n${e.stack || ''}` : String(e),
         reportPath
     }
   } finally {

@@ -13,7 +13,7 @@
 // 测试步骤：最小执行单元
 export type TestStep = {
   id: string
-  type?: 'action' | 'query' | 'assert' // 区分三种模式：操作、查询、断言
+  type?: 'action' | 'query' | 'assert' | 'input' // 区分四种模式：操作、查询、断言、输入
   action: string                       // 自然语言描述，例如 "点击登录按钮"
 }
 
@@ -49,6 +49,7 @@ graph TD
   前端 `createCase` 函数通过简单的字符串匹配逻辑，将用户输入的每一行文本转换为 `TestStep` 对象。
   - 识别 `查询:` 前缀 -> 映射为 `query` 类型
   - 识别 `断言:` 前缀 -> 映射为 `assert` 类型
+  - 识别 `输入:` 前缀 -> 映射为 `input` 类型
   - 其他 -> 默认为 `action` 类型
 
 - **持久化存储 (server/storage.ts)**:
@@ -98,7 +99,7 @@ Android 执行逻辑独立放在 `server/runner.android.ts`，与 Web runner 不
 
 - **独立依赖导入机制**：通过动态导入 `@midscene/android`，避免 Web runner 的依赖链被 Android 侧影响。
 - **核心执行逻辑对齐**：保持与 Web runner 相同的核心结构（进度回调、逐步执行、报告文件名规则、统一 RunResult）。
-- **Android 特定适配层**：使用 `AndroidDevice/AndroidAgent`，将 `action/query/assert` 映射为 `aiAct/aiQuery/aiAssert`。
+- **Android 特定适配层**：使用 `AndroidDevice/AndroidAgent`，将 `action/query/assert/input` 映射为 `aiAct/aiQuery/aiAssert/aiInput`。其中 `input` 类型会通过正则 `/^(?:输入|input)[:：]\s*(.+)$/i` 提取输入内容并调用 `agent.aiInput`。
 - **资源清理与取消**：执行结束或取消时销毁设备连接，避免悬挂资源。
 
 ### 2.5 执行 ID 生成与并发唯一性

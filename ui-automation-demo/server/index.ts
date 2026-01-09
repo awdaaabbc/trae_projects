@@ -187,7 +187,7 @@ async function runJob(job: QueueJob) {
   } catch (err) {
     Storage.updateExecution(exeId, {
       status: 'failed',
-      errorMessage: err instanceof Error ? err.message : String(err),
+      errorMessage: err instanceof Error ? `${err.message}\n${err.stack || ''}` : String(err),
       progress: 100,
     })
     broadcast({ type: 'execution', payload: Storage.getExecution(exeId) })
@@ -234,6 +234,7 @@ app.post('/api/testcases', (req: Request, res: Response) => {
       name: body.name || '',
       description: body.description || '',
       platform,
+      context: body.context,
       steps: Array.isArray(body.steps) ? body.steps : [],
       status: existing ? existing.status : 'idle',
       lastRunAt: existing?.lastRunAt,
@@ -264,6 +265,7 @@ app.put('/api/testcases/:id', (req: Request, res: Response) => {
         : body.platform === 'web'
           ? 'web'
           : tc.platform,
+    context: body.context !== undefined ? body.context : tc.context,
     steps: Array.isArray(body.steps) ? body.steps : tc.steps,
   }
   Storage.saveCase(updated)
@@ -584,6 +586,7 @@ wss.on('connection', (ws: WebSocket) => {
         broadcast({ type: 'execution', payload: Storage.getExecution(executionId) })
       } else if (msg.type === 'TASK_COMPLETED') {
         const { executionId, result, reportContent } = msg.payload
+        console.log(`[Server] Received TASK_COMPLETED for ${executionId}. Status: ${result.status}`)
         
         // Save report content if provided
         if (result.reportPath && reportContent) {
@@ -721,7 +724,7 @@ server.listen(PORT, () => {
 
 // SPA Fallback (Must be after API routes)
 if (fs.existsSync(clientDist)) {
-  app.get('*', (req, res, next) => {
+  app.get(/(.*)/, (req, res, next) => {
     if (req.path.startsWith('/api/') || req.path.startsWith('/reports/')) {
       return next()
     }

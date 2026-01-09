@@ -81,6 +81,7 @@ function connect() {
             type: 'TASK_COMPLETED',
             payload: { executionId, result, reportContent },
           }
+          console.log(`[Agent] Task ${executionId} completed. Status: ${result.status}. Sending result to server...`)
           ws?.send(JSON.stringify(completeMsg))
 
         } catch (err) {

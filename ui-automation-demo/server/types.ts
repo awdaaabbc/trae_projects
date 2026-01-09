@@ -3,10 +3,11 @@ export interface TestCase {
   name: string;
   description: string;
   platform: 'web' | 'android' | 'ios';
+  context?: string;
   steps: Array<{
     id: string;
     action: string;
-    type?: 'action' | 'query' | 'assert';
+    type?: 'action' | 'query' | 'assert' | 'input';
   }>;
   status: 'idle' | 'running' | 'done' | 'error';
   lastRunAt?: number;

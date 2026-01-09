@@ -54,6 +54,7 @@ export const Storage = {
       name: row.name,
       description: row.description,
       platform: row.platform as any,
+      context: row.context || undefined,
       steps: JSON.parse(row.steps),
       status: row.status as any,
       lastRunAt: row.last_run_at || undefined,
@@ -69,6 +70,7 @@ export const Storage = {
       name: row.name,
       description: row.description,
       platform: row.platform as any,
+      context: row.context || undefined,
       steps: JSON.parse(row.steps),
       status: row.status as any,
       lastRunAt: row.last_run_at || undefined,
@@ -78,14 +80,15 @@ export const Storage = {
 
   saveCase(tc: TestCase) {
     const stmt = db.prepare(`
-      INSERT OR REPLACE INTO test_cases (id, name, description, platform, steps, status, last_run_at, last_report_path)
-      VALUES (@id, @name, @description, @platform, @steps, @status, @lastRunAt, @lastReportPath)
+      INSERT OR REPLACE INTO test_cases (id, name, description, platform, context, steps, status, last_run_at, last_report_path)
+      VALUES (@id, @name, @description, @platform, @context, @steps, @status, @lastRunAt, @lastReportPath)
     `)
     stmt.run({
       id: tc.id,
       name: tc.name,
       description: tc.description,
       platform: tc.platform,
+      context: tc.context || null,
       steps: JSON.stringify(tc.steps),
       status: tc.status,
       lastRunAt: tc.lastRunAt || null,

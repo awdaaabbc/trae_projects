@@ -6,28 +6,64 @@ import type { TestCase, Execution } from './types.js'
 
 const execAsync = promisify(exec)
 
-async function inputViaADBKeyboard(udid: string, text: string) {
+export async function inputViaADBKeyboard(udid: string, text: string) {
   console.log(`[Android Runner] Attempting to input via ADBKeyBoard: "${text}"`)
+  let originalIME: string | null = null;
+  
   try {
     // 1. Check if ADBKeyBoard is installed
     const { stdout: listPackages } = await execAsync(`adb -s ${udid} shell pm list packages com.android.adbkeyboard`)
     if (!listPackages.includes('com.android.adbkeyboard')) {
-      throw new Error('ADBKeyBoard is not installed. Please install it to use [ADB] input mode. (https://github.com/senzhk/ADBKeyBoard)')
+      // 优化点：这里可以扩展为自动下载 APK 并安装
+      console.warn('[Android Runner] ADBKeyBoard not found. Please install it for better Chinese support.')
+      throw new Error('ADBKeyBoard not installed')
     }
 
-    // 2. Enable and Set IME
+    // 2. Get current IME to restore later
+    try {
+        const { stdout: currentIME } = await execAsync(`adb -s ${udid} shell settings get secure default_input_method`)
+        originalIME = currentIME.trim();
+    } catch (e) {
+        console.warn('[Android Runner] Failed to get current IME, skipping restore step.');
+    }
+
+    // 3. Enable and Set IME
+    // 优化点：检查是否已经启用，避免重复操作
     await execAsync(`adb -s ${udid} shell ime enable com.android.adbkeyboard/.AdbIME`)
     await execAsync(`adb -s ${udid} shell ime set com.android.adbkeyboard/.AdbIME`)
 
-    // 3. Input Text (Base64 for safety)
+    // 4. Input Text (Base64 for safety)
     const b64 = Buffer.from(text).toString('base64')
     await execAsync(`adb -s ${udid} shell am broadcast -a ADB_INPUT_B64 --es msg "${b64}"`)
     
+    // Give it a moment to process
+    await new Promise(r => setTimeout(r, 500));
+
     console.log('[Android Runner] ADBKeyBoard input successful')
   } catch (err) {
     console.error('[Android Runner] ADBKeyBoard input failed:', err)
     throw err
+  } finally {
+      // 5. Restore original IME (Optimization: User Experience)
+      if (originalIME && originalIME !== 'com.android.adbkeyboard/.AdbIME') {
+          try {
+            await execAsync(`adb -s ${udid} shell ime set ${originalIME}`)
+          } catch (e) {
+            console.warn(`[Android Runner] Failed to restore IME to ${originalIME}`);
+          }
+      }
   }
+}
+
+export async function inputViaAdbShell(udid: string, text: string) {
+    // Only works for ASCII
+    if (/[^\x00-\x7F]/.test(text)) {
+        throw new Error('Text contains non-ASCII characters, skipping adb shell input');
+    }
+    console.log(`[Android Runner] Attempting fallback to adb shell input text`)
+    // Escape special characters for shell
+    const escapedText = text.replace(/([\\"`$])/g, '\\$1').replace(/ /g, '%s');
+    await execAsync(`adb -s ${udid} shell input text "${escapedText}"`);
 }
 
 export interface RunResult {
@@ -222,16 +258,32 @@ export async function runTestCase(
           }
 
           // Default to ADBKeyBoard for all inputs as requested
+          let inputSuccess = false;
+
+          // Strategy 1: ADBKeyBoard (Best for Chinese)
           try {
              await inputViaADBKeyboard(devices[0].udid, value)
              console.log('[MidScene Input Result] { status: "success", description: "Executed input via ADBKeyBoard" }')
+             inputSuccess = true;
              return
           } catch (adbError) {
-             console.warn('[Android Runner] ADBKeyBoard input failed, falling back to aiInput:', adbError)
-             // Fall through to aiInput
+             console.warn('[Android Runner] ADBKeyBoard input failed:', adbError)
           }
 
-          console.log(`[Android Runner] Executing aiInput with value: "${value}"`)
+          // Strategy 2: ADB Shell Input (Fallback for English only)
+          if (!inputSuccess) {
+            try {
+               await inputViaAdbShell(devices[0].udid, value)
+               console.log('[MidScene Input Result] { status: "success", description: "Executed input via ADB Shell" }')
+               inputSuccess = true;
+               return
+            } catch (shellError) {
+               console.warn('[Android Runner] ADB Shell input failed/skipped:', shellError)
+            }
+          }
+
+          // Strategy 3: Midscene aiInput (Final Fallback - Clipboard/AI)
+          console.log(`[Android Runner] All native input methods failed. Falling back to aiInput with value: "${value}"`)
           const res = await agent.aiInput({ value })
           console.log('[MidScene Input Result]', JSON.stringify(res, null, 2))
           return

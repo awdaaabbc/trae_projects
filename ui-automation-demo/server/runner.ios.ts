@@ -15,7 +15,7 @@ type IosModule = {
   }
   IOSAgent: new (
     device: unknown,
-    opts: { generateReport?: boolean; reportFileName?: string }
+    opts: { generateReport?: boolean; reportFileName?: string; context?: string }
   ) => {
     aiAct: (instruction: string) => Promise<unknown>
     aiQuery: (instruction: string) => Promise<unknown>
@@ -136,6 +136,14 @@ export async function runTestCase(
     const agent = new mod.IOSAgent(device, {
       generateReport: true,
       reportFileName: reportId,
+      context: `
+        你是一个 iOS 自动化测试助手。
+        已知应用 Bundle ID 映射：
+        - "乐读小班": "com.dadaabc.zhuozan.dadateacher"
+        
+        如果指令是“打开乐读小班”或“启动乐读小班”，请优先尝试 launchApp("com.dadaabc.zhuozan.dadateacher")。
+        如果 launch 失败，尝试回到主屏幕点击“乐读小班”图标。
+      `
     })
 
     updateCallback({ status: 'running', progress: 0 })

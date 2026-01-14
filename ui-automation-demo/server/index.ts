@@ -17,9 +17,13 @@ import {
   runTestCase as runIosTestCase,
   cancelExecution as cancelIosExecution,
 } from './runner.ios.js'
+import { initCron, generateDailyReport } from './cron.js'
 import type { AgentToServerMessage, ServerToAgentMessage, AgentInfo } from './protocol.js'
 
 const app = exp()
+
+// Initialize Cron Jobs
+initCron()
 app.use(exp.json())
 
 // Serve MidScene reports statically
@@ -498,6 +502,15 @@ app.post('/api/admin/stop-all', (_req: Request, res: Response) => {
     }
 
     res.json({ data: { count } })
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : String(err) })
+  }
+})
+
+app.post('/api/admin/trigger-daily-report', async (_req: Request, res: Response) => {
+  try {
+    const reportPath = await generateDailyReport()
+    res.json({ data: { message: 'Daily report generated', path: reportPath } })
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : String(err) })
   }

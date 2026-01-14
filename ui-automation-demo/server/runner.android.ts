@@ -327,9 +327,10 @@ export async function runTestCase(
                 else if (direction === 'left') await device.scrollLeft(distance)   // Scroll to left (content moves right)
                 
                 // Force a context refresh after scroll
-                try {
-                  await agent.aiQuery('check page status')
-                } catch {}
+                // Optimization: Removed redundant aiQuery. The next aiAct/aiAssert will automatically refresh the context.
+                // try {
+                //   await agent.aiQuery('check page status')
+                // } catch {}
 
                 console.log(`[MidScene Action Result] { status: "success", description: "Executed native scroll ${direction}" }`)
                 return

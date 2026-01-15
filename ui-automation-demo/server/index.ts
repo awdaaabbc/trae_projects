@@ -187,8 +187,8 @@ async function runJob(job: QueueJob) {
       broadcast({ type: 'testcase', payload: Storage.getCase(caseId) })
     }
 
-    // 移动端执行完毕后，自动尝试终止测试应用
-    if (tc.platform === 'ios' && result.status === 'success') {
+    // 移动端执行完毕后，无论成功失败，自动尝试终止测试应用
+    if (tc.platform === 'ios') {
       let bundleId = 'com.xuexiaosi.saas' // 默认：乐读test-ad
 
       // 尝试从 context 中获取 bundleId
@@ -433,7 +433,7 @@ app.post('/api/run-raw', (req: Request, res: Response) => {
     })
 
   } catch (err) {
-    console.error('Failed to run dynamic case:', err)
+    console.error('Failed to run current case:', err)
     const msg = err instanceof Error ? err.message : String(err)
     res.status(500).json({ error: `执行失败: ${msg}` })
   }

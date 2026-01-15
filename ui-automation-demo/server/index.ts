@@ -38,22 +38,6 @@ const clientDist = path.join(process.cwd(), 'dist', 'client')
 if (fs.existsSync(clientDist)) {
   // 1. Serve static assets
   app.use(exp.static(clientDist))
-  
-  // 2. Fallback for SPA (Single Page Application)
-  // If request is GET, accepts html, and not starting with /api, /reports, /ws
-  app.use((req, res, next) => {
-    if (
-      req.method === 'GET' &&
-      req.accepts('html') &&
-      !req.path.startsWith('/api') &&
-      !req.path.startsWith('/reports') &&
-      !req.path.startsWith('/ws')
-    ) {
-      res.sendFile(path.join(clientDist, 'index.html'))
-    } else {
-      next()
-    }
-  })
 }
 
 app.use((req, res, next) => {
@@ -915,7 +899,11 @@ server.listen(PORT, () => {
 // SPA Fallback (Must be after API routes)
 if (fs.existsSync(clientDist)) {
   app.use((req, res, next) => {
-    if (req.path.startsWith('/api/') || req.path.startsWith('/reports/')) {
+    if (
+      req.path.startsWith('/api/') || 
+      req.path.startsWith('/reports/') || 
+      req.path.startsWith('/ws')
+    ) {
       return next()
     }
     if (req.method === 'GET' && req.accepts('html')) {

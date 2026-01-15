@@ -16,6 +16,7 @@ import {
 import {
   runTestCase as runIosTestCase,
   cancelExecution as cancelIosExecution,
+  terminateApp as terminateIosApp,
 } from './runner.ios.js'
 import { initCron, generateDailyReport } from './cron.js'
 import type { AgentToServerMessage, ServerToAgentMessage, AgentInfo } from './protocol.js'
@@ -35,7 +36,24 @@ app.use('/reports', exp.static(reportDir))
 // Serve Frontend Static Files (Production)
 const clientDist = path.join(process.cwd(), 'dist', 'client')
 if (fs.existsSync(clientDist)) {
+  // 1. Serve static assets
   app.use(exp.static(clientDist))
+  
+  // 2. Fallback for SPA (Single Page Application)
+  // If request is GET, accepts html, and not starting with /api, /reports, /ws
+  app.use((req, res, next) => {
+    if (
+      req.method === 'GET' &&
+      req.accepts('html') &&
+      !req.path.startsWith('/api') &&
+      !req.path.startsWith('/reports') &&
+      !req.path.startsWith('/ws')
+    ) {
+      res.sendFile(path.join(clientDist, 'index.html'))
+    } else {
+      next()
+    }
+  })
 }
 
 app.use((req, res, next) => {
@@ -185,6 +203,26 @@ async function runJob(job: QueueJob) {
       broadcast({ type: 'testcase', payload: Storage.getCase(caseId) })
     }
 
+    // 移动端执行完毕后，自动尝试终止测试应用
+    if (tc.platform === 'ios' && result.status === 'success') {
+      let bundleId = 'com.xuexiaosi.saas' // 默认：乐读test-ad
+
+      // 尝试从 context 中获取 bundleId
+      if (tc.context) {
+        try {
+          const ctx = JSON.parse(tc.context)
+          if (ctx.bundleId) {
+            bundleId = ctx.bundleId
+          }
+        } catch (e) {
+          // ignore parsing error
+        }
+      }
+
+      console.log(`[Auto-Terminate] Attempting to terminate app: ${bundleId}`)
+      terminateIosApp(exeId, bundleId).catch(e => console.error(`Failed to auto-terminate app ${bundleId}:`, e))
+    }
+
     const caseFinalStatus = result.status === 'success' ? 'done' : 'error'
     ensureCaseStatusAfterExecution(caseId, { status: caseFinalStatus, reportPath: finalReportPath })
     appendExecutionLog(exeId, caseFinalStatus === 'done' ? 'finished: success' : 'finished: failed')
@@ -306,6 +344,117 @@ app.get('/api/executions/:id', (req: Request, res: Response) => {
   res.json({ data: exe })
 })
 
+app.get('/api/executions/:id/report', (req: Request, res: Response) => {
+  const exe = Storage.getExecution(req.params.id)
+  if (!exe) return res.status(404).json({ error: '未找到执行记录' })
+  
+  if (!exe.reportPath) {
+    return res.status(404).json({ error: '报告尚未生成或生成失败' })
+  }
+
+  // Redirect to the static file path
+  // Assumes /reports is mounted to the report directory
+  res.redirect(`/reports/${exe.reportPath}`)
+})
+
+app.post('/api/run-raw', (req: Request, res: Response) => {
+  try {
+    const body = req.body as Partial<TestCase> & { targetAgentId?: string }
+    
+    // Validate required fields
+    if (!body.platform || !['web', 'android', 'ios'].includes(body.platform)) {
+      return res.status(400).json({ error: 'Missing or invalid platform (web, android, ios)' })
+    }
+    if (!Array.isArray(body.steps) || body.steps.length === 0) {
+      return res.status(400).json({ error: 'Missing or empty steps array' })
+    }
+
+    // Parse steps to identify Query/Assert
+    const parsedSteps = body.steps.map((step: any) => {
+      // If type is already explicitly set, trust it
+      if (step.type) return step
+
+      let action = step.action || ''
+      let type = 'action'
+      const lower = action.toLowerCase().trim()
+
+      if (
+        lower.startsWith('assert:') ||
+        lower.startsWith('断言：') ||
+        lower.startsWith('断言:') ||
+        lower.startsWith('检查：') ||
+        lower.startsWith('check:')
+      ) {
+        type = 'assert'
+        action = action.replace(/^(assert|断言|检查|check)[:：]\s*/i, '')
+      } else if (
+        lower.startsWith('query:') ||
+        lower.startsWith('查询：') ||
+        lower.startsWith('查询:') ||
+        lower.startsWith('ask:') ||
+        lower.startsWith('询问：')
+      ) {
+        type = 'query'
+        action = action.replace(/^(query|查询|ask|询问)[:：]\s*/i, '')
+      }
+
+      return {
+        ...step,
+        action,
+        type,
+      }
+    })
+
+    // Create a temporary test case
+    const caseId = `temp-${crypto.randomUUID()}`
+    const tc: TestCase = {
+      id: caseId,
+      name: body.name || `Dynamic Case ${new Date().toLocaleString()}`,
+      description: body.description || 'Dynamic execution from API',
+      platform: body.platform,
+      context: body.context,
+      steps: parsedSteps,
+      status: 'idle'
+    }
+    
+    // Save the temporary case so runner can find it
+    // Note: We might want a cleanup strategy for these later
+    Storage.saveCase(tc)
+    
+    // Create execution
+    const exeId = Storage.generateExecutionId(tc.name)
+    const createdAt = Date.now()
+    const exe: Execution = {
+      id: exeId,
+      caseId: caseId,
+      status: 'queued',
+      progress: 0,
+      createdAt,
+      updatedAt: createdAt,
+      fileName: 'dynamic-request', // Marker for dynamic requests
+      targetAgentId: body.targetAgentId,
+    }
+    
+    Storage.saveExecution(exe)
+    broadcast({ type: 'execution', payload: Storage.getExecution(exeId) })
+    appendExecutionLog(exeId, 'queued (dynamic)')
+    enqueue({ exeId, caseId })
+    
+    res.json({ 
+      data: {
+        executionId: exeId,
+        caseId: caseId,
+        execution: Storage.getExecution(exeId)
+      }
+    })
+
+  } catch (err) {
+    console.error('Failed to run dynamic case:', err)
+    const msg = err instanceof Error ? err.message : String(err)
+    res.status(500).json({ error: `执行失败: ${msg}` })
+  }
+})
+
 app.post('/api/execute/:id', async (req: Request, res: Response) => {
   const id = req.params.id
   const { targetAgentId } = req.body as { targetAgentId?: string }
@@ -352,8 +501,36 @@ app.post('/api/batch-execute', (req: Request, res: Response) => {
   const batchId = crypto.randomUUID()
   const executionsCreated: Execution[] = []
 
+  // 辅助函数：根据平台判断是否需要添加"返回主界面"步骤
+  const shouldAddReturnHome = (platform: string) => {
+    return platform === 'android' || platform === 'ios'
+  }
+
   for (const id of caseIds) {
     const tc = Storage.getCase(id)!
+    
+    // 如果是移动端用例，自动追加"返回主界面"步骤
+    if (shouldAddReturnHome(tc.platform)) {
+      // 检查最后一步是否已经是返回主界面，避免重复添加
+      const lastStep = tc.steps[tc.steps.length - 1]
+      const lastAction = lastStep?.action?.toLowerCase() || ''
+      const isAlreadyHome = lastAction.includes('返回主界面') || lastAction.includes('回到桌面') || lastAction.includes('home') || lastAction.includes('关闭')
+      
+      if (!isAlreadyHome) {
+        // 注意：这里我们修改的是内存中的 tc 对象，不会保存到数据库
+        // Runner 会使用内存中的 steps 执行
+        tc.steps = [
+          ...tc.steps,
+          {
+            id: crypto.randomUUID(),
+            type: 'action',
+            action: '打开最近任务页面，清除当前应用，并返回桌面 (Auto-added by Batch Execution)',
+          }
+        ]
+        console.log(`[Batch] Auto-appended 'Return Home' step to case ${tc.name} (${tc.id})`)
+      }
+    }
+
     const fileName = Storage.getCaseFilename(id)
 
     Storage.updateCase(id, { status: 'running' })
@@ -737,11 +914,15 @@ server.listen(PORT, () => {
 
 // SPA Fallback (Must be after API routes)
 if (fs.existsSync(clientDist)) {
-  app.get(/(.*)/, (req, res, next) => {
+  app.use((req, res, next) => {
     if (req.path.startsWith('/api/') || req.path.startsWith('/reports/')) {
       return next()
     }
-    res.sendFile(path.join(clientDist, 'index.html'))
+    if (req.method === 'GET' && req.accepts('html')) {
+        res.sendFile(path.join(clientDist, 'index.html'))
+    } else {
+        next()
+    }
   })
 }
 

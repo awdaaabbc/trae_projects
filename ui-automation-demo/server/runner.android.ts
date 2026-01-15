@@ -85,7 +85,7 @@ type AndroidModule = {
   }
   AndroidAgent: new (
     device: unknown,
-    opts: { generateReport?: boolean; reportFileName?: string }
+    opts: { generateReport?: boolean; reportFileName?: string; context?: string }
   ) => {
     aiAct: (instruction: string) => Promise<unknown>
     aiQuery: (instruction: string) => Promise<unknown>
@@ -202,9 +202,15 @@ export async function runTestCase(
       device.destroy().catch(() => {})
     })
 
+    const systemContext = `
+      你是一个 Android 自动化测试助手。
+      如果遇到文本输入框，请优先使用 adb keyboard 输入。
+    `
+
     const agent = new mod.AndroidAgent(device, {
       generateReport: true,
       reportFileName: reportId,
+      context: testCase.context ? `${systemContext}\n\n用户自定义补充上下文:\n${testCase.context}` : systemContext
     })
 
     // Monkey patch aiInput to force ADBKeyBoard usage globally

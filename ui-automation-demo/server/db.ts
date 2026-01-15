@@ -24,6 +24,7 @@ export function initDB() {
       name TEXT NOT NULL,
       description TEXT,
       platform TEXT NOT NULL,
+      context TEXT,
       steps TEXT NOT NULL, -- JSON
       status TEXT NOT NULL,
       last_run_at INTEGER,

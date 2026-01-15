@@ -12,6 +12,10 @@ type IosModule = {
   IOSDevice: new (opts: { wdaPort: number; wdaHost: string }) => {
     connect: () => Promise<void>
     destroy: () => Promise<void>
+    terminateApp: (bundleId: string) => Promise<void>
+    wdaBackend?: {
+      terminateApp: (bundleId: string) => Promise<void>
+    }
   }
   IOSAgent: new (
     device: unknown,
@@ -45,6 +49,37 @@ export function cancelExecution(executionId: string) {
   runningExecutions.delete(executionId)
   if (cleanup) cleanup().catch(() => {})
   return true
+}
+
+export async function terminateApp(executionId: string, bundleId: string) {
+    // 移除 runningExecutions 检查，因为这是一个独立的操作，可能在执行结束后调用
+    // 而且我们每次都会重新建立连接，所以不需要依赖现有的 execution context
+    
+    const mod = await iosModuleLoader()
+    const wdaPort = Number(process.env.WDA_PORT) || 8100
+    const wdaHost = process.env.WDA_HOST || 'localhost'
+    const device = new mod.IOSDevice({ wdaPort, wdaHost })
+    
+    try {
+        await device.connect()
+        console.log(`[iOS Runner] Terminating app: ${bundleId}`)
+        // @ts-ignore - The type definition in IosModule might be incomplete, but the method exists in @midscene/ios
+        if (device.terminateApp) {
+             await device.terminateApp(bundleId)
+        } else if (device.wdaBackend && device.wdaBackend.terminateApp) {
+             // Fallback to internal property if direct method not exposed in type
+             await device.wdaBackend.terminateApp(bundleId)
+        } else {
+             // Fallback to raw request if needed (simplified)
+             console.warn('[iOS Runner] terminateApp method not found on device instance')
+        }
+    } catch (e) {
+        // 如果是 App 未运行导致的错误，可以忽略；但如果是连接失败等严重错误，还是需要记录
+        // 通常 wda 如果 terminate 一个不存在的 app 会返回成功或者特定的错误
+        console.warn(`[iOS Runner] Failed to terminate app ${bundleId} (it might not be running):`, e)
+    } finally {
+        await device.destroy().catch(() => {})
+    }
 }
 
 export async function runTestCase(
@@ -133,17 +168,19 @@ export async function runTestCase(
       device.destroy().catch(() => {})
     })
 
+    const systemContext = `
+      你是一个 iOS 自动化测试助手。
+      已知应用 Bundle ID 映射：
+      - "乐读小班": "com.dadaabc.zhuozan.dadateacher"
+      
+      如果指令是“打开乐读小班”或“启动乐读小班”，请优先尝试 launchApp("com.dadaabc.zhuozan.dadateacher")。
+      如果 launch 失败，尝试回到主屏幕点击“乐读小班”图标。
+    `
+
     const agent = new mod.IOSAgent(device, {
       generateReport: true,
       reportFileName: reportId,
-      context: `
-        你是一个 iOS 自动化测试助手。
-        已知应用 Bundle ID 映射：
-        - "乐读小班": "com.dadaabc.zhuozan.dadateacher"
-        
-        如果指令是“打开乐读小班”或“启动乐读小班”，请优先尝试 launchApp("com.dadaabc.zhuozan.dadateacher")。
-        如果 launch 失败，尝试回到主屏幕点击“乐读小班”图标。
-      `
+      context: testCase.context ? `${systemContext}\n\n用户自定义补充上下文:\n${testCase.context}` : systemContext
     })
 
     updateCallback({ status: 'running', progress: 0 })

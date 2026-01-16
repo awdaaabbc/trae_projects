@@ -36,6 +36,8 @@ import {
   AppleOutlined,
   AndroidOutlined,
   GlobalOutlined,
+  RobotOutlined,
+  BulbOutlined,
 } from '@ant-design/icons'
 import './App.css'
 
@@ -59,6 +61,19 @@ type TestCase = {
   lastRunAt?: number
   lastReportPath?: string
 }
+
+type ReviewSuggestion = {
+  stepIndex: number
+  severity: 'error' | 'warning' | 'info'
+  message: string
+  suggestion?: string
+}
+
+type ReviewResult = {
+  score: number
+  suggestions: ReviewSuggestion[]
+}
+
 type Execution = {
   id: string
   caseId: string
@@ -76,7 +91,8 @@ type Execution = {
 
 async function api<T>(url: string, init?: RequestInit) {
   const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), 15000)
+  // Increase timeout to 60s for LLM requests
+  const timeoutId = setTimeout(() => controller.abort(), 60000)
   try {
     if (import.meta.env.DEV) {
       console.debug('[api]', init?.method || 'GET', url)
@@ -92,12 +108,14 @@ async function api<T>(url: string, init?: RequestInit) {
     try {
       json = text ? (JSON.parse(text) as unknown) : null
     } catch {
+      console.error('API Response Text:', text)
       throw new Error(
         `接口返回非 JSON（HTTP ${res.status}）。响应片段：${text.slice(0, 200) || '(空)'}`
       )
     }
 
     if (!res.ok) {
+      console.error('API Error Response:', json)
       const msg =
         typeof json === 'object' &&
         json &&
@@ -110,8 +128,9 @@ async function api<T>(url: string, init?: RequestInit) {
 
     return json as { data: T }
   } catch (err: unknown) {
+    console.error('API Request Failed:', err)
     if (err instanceof DOMException && err.name === 'AbortError') {
-      throw new Error('请求超时，请稍后重试')
+      throw new Error('请求超时（60s），请检查网络或后台服务')
     }
     throw err instanceof Error ? err : new Error('网络异常，请检查服务是否启动')
   } finally {
@@ -143,6 +162,9 @@ function App() {
     stepsText: '',
   })
   
+  const [reviewing, setReviewing] = useState(false)
+  const [reviewResult, setReviewResult] = useState<ReviewResult | null>(null)
+
   const isValid = useMemo(() => {
     return creating.name.trim() && creating.stepsText.trim()
   }, [creating.name, creating.stepsText])
@@ -359,6 +381,36 @@ function App() {
   }, [selected, creating.id])
 
   // Actions
+  async function reviewCase() {
+    if (!creating.stepsText.trim()) return
+    setReviewing(true)
+    setReviewResult(null)
+    try {
+      const steps = creating.stepsText.split('\n').map(s => s.trim()).filter(Boolean)
+        .map((s, i) => ({ id: `${i}`, action: s })) // Simple mapping for review
+      
+      const res = await api<ReviewResult>('/api/review-case', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: creating.name,
+          platform: creating.platform,
+          context: creating.context,
+          steps: steps
+        })
+      })
+      setReviewResult(res.data)
+      if (res.data.score === 100) {
+        messageApi.success('AI 审查通过，用例质量完美！')
+      } else {
+        messageApi.warning(`AI 审查完成，得分 ${res.data.score} 分，请查看建议`)
+      }
+    } catch (e) {
+      messageApi.error('审查失败: ' + (e instanceof Error ? e.message : '未知错误'))
+    } finally {
+      setReviewing(false)
+    }
+  }
+
   async function createCase() {
     try {
       const steps: TestStep[] = creating.stepsText
@@ -525,6 +577,7 @@ function App() {
   const handleCreateClick = () => {
     setSelectedCase(null)
     setCreating({ id: '', name: '', description: '', platform: 'web', context: '', stepsText: '' })
+    setReviewResult(null)
     setIsModalOpen(true)
   }
 
@@ -539,6 +592,7 @@ function App() {
 
   const handleEditClick = () => {
     // State is already synced via useEffect
+    setReviewResult(null)
     setIsModalOpen(true)
   }
 
@@ -909,17 +963,87 @@ function App() {
             />
           </Form.Item>
           <Form.Item label="测试步骤（每行一步）" required tooltip="支持普通指令、'查询: xxx'、'断言: xxx'">
-            <TextArea
-              value={creating.stepsText}
-              onChange={(e) => setCreating({ ...creating, stepsText: e.target.value })}
-              placeholder={`示例：
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                {reviewResult?.refinedSteps && reviewResult.score < 100 && (
+                  <Button
+                    size="small"
+                    type="primary"
+                    ghost
+                    icon={<CheckCircleOutlined />}
+                    onClick={() => {
+                      setCreating({ ...creating, stepsText: reviewResult.refinedSteps! })
+                      messageApi.success('已替换为 AI 优化后的用例')
+                    }}
+                  >
+                    一键应用 AI 建议
+                  </Button>
+                )}
+                <Button 
+                  icon={<RobotOutlined />} 
+                  onClick={reviewCase} 
+                  loading={reviewing}
+                  disabled={!creating.stepsText.trim()}
+                  size="small"
+                >
+                  AI 质量审查
+                </Button>
+              </div>
+              <TextArea
+                value={creating.stepsText}
+                onChange={(e) => setCreating({ ...creating, stepsText: e.target.value })}
+                placeholder={`示例：
 打开 https://www.baidu.com
 输入: MidScene
 点击搜索按钮
 断言: 搜索结果包含官网链接`}
-              autoSize={{ minRows: 6, maxRows: 12 }}
-              status={!creating.stepsText.trim() ? 'error' : ''}
-            />
+                autoSize={{ minRows: 6, maxRows: 12 }}
+                status={!creating.stepsText.trim() ? 'error' : ''}
+              />
+              
+              {reviewResult && (
+                <div style={{ 
+                  marginTop: 8, 
+                  padding: 12, 
+                  background: reviewResult.score === 100 ? '#f6ffed' : '#fffbe6', 
+                  border: `1px solid ${reviewResult.score === 100 ? '#b7eb8f' : '#ffe58f'}`,
+                  borderRadius: 4
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <Text strong style={{ color: reviewResult.score === 100 ? '#52c41a' : '#faad14' }}>
+                      <RobotOutlined /> 质量评分: {reviewResult.score} 分
+                    </Text>
+                    {reviewResult.score === 100 && <Tag color="success">完美</Tag>}
+                  </div>
+                  
+                  {reviewResult.suggestions.length > 0 && (
+                    <List
+                      size="small"
+                      dataSource={reviewResult.suggestions}
+                      renderItem={item => (
+                        <List.Item style={{ padding: '4px 0', border: 'none' }}>
+                          <Space align="start">
+                            {item.severity === 'error' ? <CloseCircleOutlined style={{ color: '#ff4d4f', marginTop: 4 }} /> : 
+                             item.severity === 'warning' ? <SyncOutlined spin={false} style={{ color: '#faad14', marginTop: 4 }} /> : 
+                             <BulbOutlined style={{ color: '#1890ff', marginTop: 4 }} />}
+                            <div>
+                              <Text type={item.severity === 'error' ? 'danger' : 'secondary'} strong>
+                                [步骤 {item.stepIndex + 1}] {item.message}
+                              </Text>
+                              {item.suggestion && (
+                                <div style={{ color: '#666', fontSize: 12, marginTop: 2 }}>
+                                  建议: {item.suggestion}
+                                </div>
+                              )}
+                            </div>
+                          </Space>
+                        </List.Item>
+                      )}
+                    />
+                  )}
+                </div>
+              )}
+            </div>
           </Form.Item>
         </Form>
       </Modal>

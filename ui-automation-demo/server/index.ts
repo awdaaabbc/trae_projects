@@ -19,6 +19,7 @@ import {
   terminateApp as terminateIosApp,
 } from './runner.ios.js'
 import { initCron, generateDailyReport } from './cron.js'
+import { reviewTestCase } from './reviewer.js'
 import type { AgentToServerMessage, ServerToAgentMessage, AgentInfo } from './protocol.js'
 
 const app = exp()
@@ -155,12 +156,16 @@ async function runJob(job: QueueJob) {
     if (tc.platform === 'android') {
       // runner = runAndroidTestCase
       // Use remote runner for Android if enabled, or check if we have agents
-      runner = (t: TestCase, e: string, cb: any) => runRemoteTestCase(t, e, cb, execution.targetAgentId)
+      runner = (t: TestCase, e: string, cb: any, lb: any) => runRemoteTestCase(t, e, cb, execution.targetAgentId, lb)
     } else if (tc.platform === 'ios') {
       // runner = runIosTestCase
-      runner = (t: TestCase, e: string, cb: any) => runRemoteTestCase(t, e, cb, execution.targetAgentId)
+      runner = (t: TestCase, e: string, cb: any, lb: any) => runRemoteTestCase(t, e, cb, execution.targetAgentId, lb)
     } else {
       runner = runWebTestCase
+    }
+
+    const logCallback = (log: string) => {
+      appendExecutionLog(exeId, log)
     }
 
     const result = await runner(tc, exeId, (patch: Partial<Execution>) => {
@@ -168,7 +173,7 @@ async function runJob(job: QueueJob) {
         patch.reportPath ? { ...patch, reportPath: normalizeReportPath(patch.reportPath) } : patch
       Storage.updateExecution(exeId, normalizedPatch)
       broadcast({ type: 'execution', payload: Storage.getExecution(exeId) })
-    })
+    }, logCallback)
 
     const finalReportPath = normalizeReportPath(result.reportPath)
     Storage.updateExecution(exeId, {
@@ -288,14 +293,54 @@ app.put('/api/testcases/:id', (req: Request, res: Response) => {
     platform:
       body.platform === 'android'
         ? 'android'
-        : body.platform === 'web'
-          ? 'web'
-          : tc.platform,
+        : body.platform === 'ios'
+          ? 'ios'
+          : body.platform === 'web'
+            ? 'web'
+            : tc.platform,
     context: body.context !== undefined ? body.context : tc.context,
     steps: Array.isArray(body.steps) ? body.steps : tc.steps,
   }
   Storage.saveCase(updated)
   res.json({ data: updated })
+})
+
+app.post('/api/review-case', async (req: Request, res: Response) => {
+  try {
+    const body = req.body as Partial<TestCase>
+    
+    // Construct a temporary TestCase object for review
+    const tc: TestCase = {
+      id: 'review-temp',
+      name: body.name || 'Review Case',
+      description: body.description || '',
+      platform: body.platform || 'web',
+      context: body.context,
+      steps: Array.isArray(body.steps) ? body.steps : [],
+      status: 'idle'
+    }
+
+    if (tc.steps.length === 0) {
+      return res.json({ 
+        data: {
+          score: 0,
+          suggestions: [{
+            stepIndex: -1,
+            severity: 'error',
+            message: '测试步骤为空',
+            suggestion: '请至少添加一个测试步骤'
+          }]
+        }
+      })
+    }
+
+    const result = await reviewTestCase(tc)
+    res.json({ data: result })
+  } catch (err) {
+    console.error('Failed to review case:', err)
+    const msg = err instanceof Error ? err.message : String(err)
+    res.status(500).json({ error: `审查失败: ${msg}` })
+  }
 })
 
 // Executions APIs
@@ -354,52 +399,52 @@ app.post('/api/run-raw', (req: Request, res: Response) => {
     }
 
     // Parse steps to identify Query/Assert
-    const parsedSteps = body.steps.map((step: any) => {
-      // If type is already explicitly set, trust it
-      if (step.type) return step
+            const parsedSteps = body.steps.map((step: any) => {
+              // If type is already explicitly set, trust it
+              if (step.type) return step
 
-      let action = step.action || ''
-      let type = 'action'
-      const lower = action.toLowerCase().trim()
+              let action = step.action || ''
+              let type = 'action'
+              const lower = action.toLowerCase().trim()
 
-      if (
-        lower.startsWith('assert:') ||
-        lower.startsWith('断言：') ||
-        lower.startsWith('断言:') ||
-        lower.startsWith('检查：') ||
-        lower.startsWith('check:')
-      ) {
-        type = 'assert'
-        action = action.replace(/^(assert|断言|检查|check)[:：]\s*/i, '')
-      } else if (
-        lower.startsWith('query:') ||
-        lower.startsWith('查询：') ||
-        lower.startsWith('查询:') ||
-        lower.startsWith('ask:') ||
-        lower.startsWith('询问：')
-      ) {
-        type = 'query'
-        action = action.replace(/^(query|查询|ask|询问)[:：]\s*/i, '')
-      }
+              if (
+                lower.startsWith('assert:') ||
+                lower.startsWith('断言：') ||
+                lower.startsWith('断言:') ||
+                lower.startsWith('检查：') ||
+                lower.startsWith('check:')
+              ) {
+                type = 'assert'
+                action = action.replace(/^(assert|断言|检查|check)[:：]\s*/i, '')
+              } else if (
+                lower.startsWith('query:') ||
+                lower.startsWith('查询：') ||
+                lower.startsWith('查询:') ||
+                lower.startsWith('ask:') ||
+                lower.startsWith('询问：')
+              ) {
+                type = 'query'
+                action = action.replace(/^(query|查询|ask|询问)[:：]\s*/i, '')
+              }
 
-      return {
-        ...step,
-        action,
-        type,
-      }
-    })
+              return {
+                ...step,
+                action,
+                type,
+              }
+            })
 
-    // Create a temporary test case
-    const caseId = `temp-${crypto.randomUUID()}`
-    const tc: TestCase = {
-      id: caseId,
-      name: body.name || `Dynamic Case ${new Date().toLocaleString()}`,
-      description: body.description || 'Dynamic execution from API',
-      platform: body.platform,
-      context: body.context,
-      steps: parsedSteps,
-      status: 'idle'
-    }
+            // Create a temporary test case
+            const caseId = `temp-${crypto.randomUUID()}`
+            const tc: TestCase = {
+              id: caseId,
+              name: body.name || `Dynamic Case ${new Date().toLocaleString()}`,
+              description: body.description || 'Dynamic execution from API',
+              platform: body.platform,
+              context: (body as any).aiContext || body.context, // Accept aiContext or fallback to context
+              steps: parsedSteps,
+              status: 'idle'
+            }
     
     // Save the temporary case so runner can find it
     // Note: We might want a cleanup strategy for these later
@@ -758,6 +803,9 @@ wss.on('connection', (ws: WebSocket) => {
           patch.reportPath ? { ...patch, reportPath: normalizeReportPath(patch.reportPath) } : patch
         Storage.updateExecution(executionId, normalizedPatch)
         broadcast({ type: 'execution', payload: Storage.getExecution(executionId) })
+      } else if (msg.type === 'APPEND_LOG') {
+        const { executionId, log } = msg.payload
+        appendExecutionLog(executionId, log)
       } else if (msg.type === 'TASK_COMPLETED') {
         const { executionId, result, reportContent } = msg.payload
         console.log(`[Server] Received TASK_COMPLETED for ${executionId}. Status: ${result.status}`)
@@ -799,14 +847,15 @@ async function runRemoteTestCase(
   testCase: TestCase, 
   executionId: string, 
   _updateCallback: (patch: Partial<Execution>) => void,
-  targetAgentId?: string
+  targetAgentId?: string,
+  _logCallback?: (log: string) => void
 ): Promise<{ status: 'success' | 'failed'; reportPath?: string; errorMessage?: string }> {
   // Find suitable agent
   let targetWs: WebSocket | undefined
 
   if (targetAgentId) {
     for (const [ws, info] of agents.entries()) {
-      if (info.id === targetAgentId && info.platform === testCase.platform) {
+      if (info.id === targetAgentId) {
         targetWs = ws
         break
       }

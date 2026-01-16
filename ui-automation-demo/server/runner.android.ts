@@ -121,11 +121,17 @@ export function cancelExecution(executionId: string) {
 export async function runTestCase(
   testCase: TestCase,
   executionId: string,
-  updateCallback: (patch: Partial<Execution>) => void
+  updateCallback: (patch: Partial<Execution>) => void,
+  logCallback?: (log: string) => void
 ): Promise<RunResult> {
   const controller = new AbortController()
   const { signal } = controller
   let cleanup: (() => Promise<void>) | undefined
+
+  const log = (msg: string) => {
+    console.log(msg)
+    if (logCallback) logCallback(msg)
+  }
 
   try {
     const hasModel =
@@ -213,6 +219,14 @@ export async function runTestCase(
       context: testCase.context ? `${systemContext}\n\n用户自定义补充上下文:\n${testCase.context}` : systemContext
     })
 
+    // Inject context into aiContext if available
+    if (testCase.context) {
+       // @ts-ignore - aiContext might be protected or not in type definition, but we need to try injecting it
+       if (typeof (agent as any).aiContext === 'function') {
+         (agent as any).aiContext(testCase.context)
+       }
+    }
+
     // Monkey patch aiInput to force ADBKeyBoard usage globally
     // This catches inputs triggered by aiAct (e.g. "Enter 6.68") that we don't intercept manually
     const originalAiInput = agent.aiInput.bind(agent)
@@ -236,17 +250,19 @@ export async function runTestCase(
       const step = testCase.steps[i]
       const progress = Math.round((i / totalSteps) * 100)
       updateCallback({ progress })
+      
+      log(`Executing step ${i + 1}/${totalSteps}: ${step.action}`)
 
       const stepTimeout = process.env.UI_AUTOMATION_STEP_TIMEOUT ? Number(process.env.UI_AUTOMATION_STEP_TIMEOUT) : 300000
       const stepPromise = (async () => {
         if (step.type === 'query') {
           const res = await agent.aiQuery(step.action)
-          console.log('[MidScene Query Result]', JSON.stringify(res, null, 2))
+          log(`[MidScene Query Result] ${JSON.stringify(res, null, 2)}`)
           return
         }
         if (step.type === 'assert') {
           const res = await agent.aiAssert(step.action)
-          console.log('[MidScene Assert Result]', JSON.stringify(res, null, 2))
+          log(`[MidScene Assert Result] ${JSON.stringify(res, null, 2)}`)
           return
         }
 
@@ -269,7 +285,7 @@ export async function runTestCase(
           // Strategy 1: ADBKeyBoard (Best for Chinese)
           try {
              await inputViaADBKeyboard(devices[0].udid, value)
-             console.log('[MidScene Input Result] { status: "success", description: "Executed input via ADBKeyBoard" }')
+             log('[MidScene Input Result] { status: "success", description: "Executed input via ADBKeyBoard" }')
              inputSuccess = true;
              return
           } catch (adbError) {
@@ -280,7 +296,7 @@ export async function runTestCase(
           if (!inputSuccess) {
             try {
                await inputViaAdbShell(devices[0].udid, value)
-               console.log('[MidScene Input Result] { status: "success", description: "Executed input via ADB Shell" }')
+               log('[MidScene Input Result] { status: "success", description: "Executed input via ADB Shell" }')
                inputSuccess = true;
                return
             } catch (shellError) {
@@ -291,7 +307,7 @@ export async function runTestCase(
           // Strategy 3: Midscene aiInput (Final Fallback - Clipboard/AI)
           console.log(`[Android Runner] All native input methods failed. Falling back to aiInput with value: "${value}"`)
           const res = await agent.aiInput({ value })
-          console.log('[MidScene Input Result]', JSON.stringify(res, null, 2))
+          log(`[MidScene Input Result] ${JSON.stringify(res, null, 2)}`)
           return
         }
 
@@ -325,20 +341,14 @@ export async function runTestCase(
            }
 
            if (direction) {
-              console.log(`[Android Runner] Executing native scroll/swipe: direction=${direction}, distance=${distance ?? 'default'}`)
+              log(`[Android Runner] Executing native scroll/swipe: direction=${direction}, distance=${distance ?? 'default'}`)
               try {
                 if (direction === 'down') await device.scrollDown(distance)
                 else if (direction === 'up') await device.scrollUp(distance)
                 else if (direction === 'right') await device.scrollRight(distance) // Scroll to right (content moves left)
                 else if (direction === 'left') await device.scrollLeft(distance)   // Scroll to left (content moves right)
                 
-                // Force a context refresh after scroll
-                // Optimization: Removed redundant aiQuery. The next aiAct/aiAssert will automatically refresh the context.
-                // try {
-                //   await agent.aiQuery('check page status')
-                // } catch {}
-
-                console.log(`[MidScene Action Result] { status: "success", description: "Executed native scroll ${direction}" }`)
+                log(`[MidScene Action Result] { status: "success", description: "Executed native scroll ${direction}" }`)
                 return
               } catch (e) {
                 console.error('[Android Runner] Native scroll failed:', e)
@@ -348,7 +358,7 @@ export async function runTestCase(
         }
 
         const res = await agent.aiAct(step.action)
-        console.log('[MidScene Action Result]', JSON.stringify(res, null, 2))
+        log(`[MidScene Action Result] ${JSON.stringify(res, null, 2)}`)
       })()
 
       await Promise.race([

@@ -56,12 +56,18 @@ function connect() {
         
         try {
           const result = await runTestCase(testCase, executionId, (patch) => {
-            const updateMsg: AgentToServerMessage = {
-              type: 'UPDATE_EXECUTION',
-              payload: { executionId, patch },
-            }
-            ws?.send(JSON.stringify(updateMsg))
-          })
+          const updateMsg: AgentToServerMessage = {
+            type: 'UPDATE_EXECUTION',
+            payload: { executionId, patch },
+          }
+          ws?.send(JSON.stringify(updateMsg))
+        }, (log) => {
+          const logMsg: AgentToServerMessage = {
+            type: 'APPEND_LOG',
+            payload: { executionId, log },
+          }
+          ws?.send(JSON.stringify(logMsg))
+        })
 
           let reportContent: string | undefined
           if (result.reportPath) {

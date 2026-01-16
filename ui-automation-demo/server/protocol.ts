@@ -14,4 +14,5 @@ export type ServerToAgentMessage =
 export type AgentToServerMessage =
   | { type: 'REGISTER'; payload: AgentInfo }
   | { type: 'UPDATE_EXECUTION'; payload: { executionId: string; patch: Partial<Execution> } }
+  | { type: 'APPEND_LOG'; payload: { executionId: string; log: string } }
   | { type: 'TASK_COMPLETED'; payload: { executionId: string; result: { status: 'success' | 'failed'; reportPath?: string; errorMessage?: string }; reportContent?: string } }

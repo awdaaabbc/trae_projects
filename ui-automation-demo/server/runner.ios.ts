@@ -85,11 +85,17 @@ export async function terminateApp(executionId: string, bundleId: string) {
 export async function runTestCase(
   testCase: TestCase,
   executionId: string,
-  updateCallback: (patch: Partial<Execution>) => void
+  updateCallback: (patch: Partial<Execution>) => void,
+  logCallback?: (log: string) => void
 ): Promise<RunResult> {
   const controller = new AbortController()
   const { signal } = controller
   let cleanup: (() => Promise<void>) | undefined
+
+  const log = (msg: string) => {
+    console.log(msg)
+    if (logCallback) logCallback(msg)
+  }
 
   try {
     const hasModel =
@@ -183,6 +189,14 @@ export async function runTestCase(
       context: testCase.context ? `${systemContext}\n\n用户自定义补充上下文:\n${testCase.context}` : systemContext
     })
 
+    // Inject context into aiContext if available
+    if (testCase.context) {
+       // @ts-ignore - aiContext might be protected or not in type definition, but we need to try injecting it
+       if (typeof (agent as any).aiContext === 'function') {
+         (agent as any).aiContext(testCase.context)
+       }
+    }
+
     updateCallback({ status: 'running', progress: 0 })
     const totalSteps = testCase.steps.length
 
@@ -192,21 +206,23 @@ export async function runTestCase(
       const step = testCase.steps[i]
       const progress = Math.round((i / totalSteps) * 100)
       updateCallback({ progress })
+      
+      log(`Executing step ${i + 1}/${totalSteps}: ${step.action}`)
 
       const stepTimeout = process.env.UI_AUTOMATION_STEP_TIMEOUT ? Number(process.env.UI_AUTOMATION_STEP_TIMEOUT) : 300000
       const stepPromise = (async () => {
         if (step.type === 'query') {
           const res = await agent.aiQuery(step.action)
-          console.log('[MidScene Query Result]', JSON.stringify(res, null, 2))
+          log(`[MidScene Query Result] ${JSON.stringify(res, null, 2)}`)
           return
         }
         if (step.type === 'assert') {
           const res = await agent.aiAssert(step.action)
-          console.log('[MidScene Assert Result]', JSON.stringify(res, null, 2))
+          log(`[MidScene Assert Result] ${JSON.stringify(res, null, 2)}`)
           return
         }
         const res = await agent.aiAct(step.action)
-        console.log('[MidScene Action Result]', JSON.stringify(res, null, 2))
+        log(`[MidScene Action Result] ${JSON.stringify(res, null, 2)}`)
       })()
 
       await Promise.race([

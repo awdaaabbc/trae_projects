@@ -26,11 +26,17 @@ export function cancelExecution(executionId: string) {
 export async function runTestCase(
   testCase: TestCase,
   executionId: string,
-  updateCallback: (patch: Partial<Execution>) => void
+  updateCallback: (patch: Partial<Execution>) => void,
+  logCallback?: (log: string) => void
 ): Promise<RunResult> {
   let browser: Browser | undefined
   const controller = new AbortController()
   const { signal } = controller
+
+  const log = (msg: string) => {
+    console.log(msg)
+    if (logCallback) logCallback(msg)
+  }
 
   try {
     const hasModel =
@@ -99,16 +105,17 @@ export async function runTestCase(
       }
     })
     
-    // Initialize Agent with report configuration
-    const agentOpts = {
-      generateReport: true,
-      reportFileName: reportId,
-    } as unknown as ConstructorParameters<typeof PlaywrightAgent>[1]
-    const agent = new PlaywrightAgent(page, agentOpts)
+    const agent = new PlaywrightAgent(page, {
+        generateReport: true,
+        reportFileName: reportId,
+    })
 
+    // Inject context into aiContext if available
     if (testCase.context) {
-      console.log(`[Runner] Setting AI Context: ${testCase.context}`)
-      await agent.setAIActContext(testCase.context)
+       // @ts-ignore - aiContext might be protected or not in type definition, but we need to try injecting it
+       if (typeof (agent as any).aiContext === 'function') {
+         (agent as any).aiContext(testCase.context)
+       }
     }
 
     updateCallback({ status: 'running', progress: 0 })
@@ -122,20 +129,20 @@ export async function runTestCase(
         updateCallback({ progress })
 
         try {
-            console.log(`Executing step ${i + 1}/${totalSteps}: ${step.type || 'action'} - ${step.action}`)
+            log(`Executing step ${i + 1}/${totalSteps}: ${step.type || 'action'} - ${step.action}`)
             
             // Timeout wrapper for each step
             const stepTimeout = process.env.UI_AUTOMATION_STEP_TIMEOUT ? Number(process.env.UI_AUTOMATION_STEP_TIMEOUT) : 300000
             const stepPromise = (async () => {
                if (step.type === 'query') {
                    const res = await agent.aiQuery(step.action)
-                   console.log('[MidScene Query Result]', JSON.stringify(res, null, 2))
+                   log(`[MidScene Query Result] ${JSON.stringify(res, null, 2)}`)
                } else if (step.type === 'assert') {
                    const res = await agent.aiAssert(step.action)
-                   console.log('[MidScene Assert Result]', JSON.stringify(res, null, 2))
+                   log(`[MidScene Assert Result] ${JSON.stringify(res, null, 2)}`)
                } else {
                    const res = await agent.aiAction(step.action)
-                   console.log('[MidScene Action Result]', JSON.stringify(res, null, 2))
+                   log(`[MidScene Action Result] ${JSON.stringify(res, null, 2)}`)
                }
             })()
 
